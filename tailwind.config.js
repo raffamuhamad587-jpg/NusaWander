@@ -13,7 +13,24 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                sans: ['Inter', ...defaultTheme.fontFamily.sans],
+                heading: ['Epilogue', ...defaultTheme.fontFamily.sans],
+                body: ['Inter', ...defaultTheme.fontFamily.sans],
+            },
+            colors: {
+                brand: {
+                    bg: '#eefdf5',
+                    dark: '#003527',
+                    text: '#404945',
+                    input: '#e8f7ef',
+                    primary: '#174c3c',
+                    primaryHover: '#003527',
+                    footer: 'rgba(232,247,239,0.7)',
+                    header: 'rgba(238,253,245,0.85)',
+                },
+            },
+            borderRadius: {
+                'card': '1.5rem', // 24px
             },
         },
     },
