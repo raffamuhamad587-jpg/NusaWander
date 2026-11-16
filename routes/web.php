@@ -30,8 +30,14 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::resource('/categories', \App\Http\Controllers\Admin\CategoryController::class)
         ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
 
+    Route::patch('/destinations/{destination}/toggle-status', [\App\Http\Controllers\Admin\DestinationController::class, 'toggleStatus'])
+        ->name('destinations.toggle-status');
+
     Route::resource('/destinations', \App\Http\Controllers\Admin\DestinationController::class)
         ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
+
+    Route::patch('/destination-images/{destination_image}/order', [\App\Http\Controllers\Admin\DestinationImageController::class, 'updateOrder'])
+        ->name('destination-images.order');
 
     Route::resource('/destination-images', \App\Http\Controllers\Admin\DestinationImageController::class)
         ->only(['store', 'destroy']);
