@@ -21,9 +21,9 @@ defineProps({
             <h2 class="text-xl font-heading font-semibold text-[#003527] mb-6 tracking-tight">Ringkasan Dashboard</h2>
 
             <!-- Stat Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
                 <!-- Total Destinations -->
-                <div class="bg-white rounded-2xl border border-emerald-100 shadow-sm p-6">
+                <div class="bg-white rounded-3xl border border-emerald-100 shadow-sm p-6">
                     <div class="flex items-start justify-between">
                         <div>
                             <p class="text-sm font-semibold text-[#404945]/70 uppercase tracking-wider">Total Destinasi</p>

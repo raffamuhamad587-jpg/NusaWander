@@ -142,7 +142,7 @@ function logout() {
         ></div>
 
         <!-- Main Content -->
-        <div class="flex-1 flex flex-col min-w-0 lg:ml-0">
+        <div class="flex-1 flex flex-col min-w-0 lg:ml-64">
             <!-- Topbar -->
             <header class="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-emerald-100">
                 <div class="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
