@@ -1,8 +1,8 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { Link, Head } from '@inertiajs/vue3'
+import { Link, Head, useForm, usePage, router } from '@inertiajs/vue3'
 import PublicLayout from '@/Layouts/PublicLayout.vue'
-import { MapPin, Clock, Tag, ChevronRight, Share2, Heart, ArrowLeft } from 'lucide-vue-next'
+import { MapPin, Clock, Tag, ChevronRight, Share2, Heart, ArrowLeft, Star, Trash2, Send } from 'lucide-vue-next'
 
 const props = defineProps({
     destination: {
@@ -13,9 +13,46 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    canReview: {
+        type: Boolean,
+        default: false,
+    },
 })
 
+const page = usePage()
 const activeImageIndex = ref(0)
+
+const reviewForm = useForm({
+    rating: 0,
+    komentar: '',
+})
+
+const hoverRating = ref(0)
+
+const reviews = computed(() => props.destination.reviews ?? [])
+
+const averageRating = computed(() => {
+    if (reviews.value.length === 0) return 0
+    const total = reviews.value.reduce((sum, r) => sum + r.rating, 0)
+    return (total / reviews.value.length).toFixed(1)
+})
+
+function submitReview() {
+    if (reviewForm.rating < 1) {
+        reviewForm.setError('rating', 'Pilih rating bintang terlebih dahulu.')
+        return
+    }
+    reviewForm.post(route('reviews.store', props.destination.id), {
+        preserveScroll: true,
+        onSuccess: () => reviewForm.reset(),
+    })
+}
+
+function deleteReview(review) {
+    if (confirm('Hapus ulasan Anda?')) {
+        router.delete(route('reviews.destroy', review.id), { preserveScroll: true })
+    }
+}
 
 const images = computed(() => {
     if (props.destination.images && props.destination.images.length > 0) {
@@ -211,6 +248,156 @@ function formatPrice(price) {
                         >
                             Daftar untuk Menyusun Rencana
                         </Link>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reviews Section -->
+            <div class="mt-20 pt-12 border-t border-emerald-100 space-y-8">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div class="flex items-center gap-4">
+                        <div class="bg-white rounded-2xl border border-emerald-100 shadow-sm px-5 py-4 text-center">
+                            <p class="font-heading font-bold text-3xl text-[#003527] leading-none">{{ averageRating }}</p>
+                            <div class="flex items-center justify-center gap-0.5 mt-1.5">
+                                <Star
+                                    v-for="n in 5"
+                                    :key="n"
+                                    :class="[
+                                        'w-3.5 h-3.5',
+                                        n <= Math.round(averageRating) ? 'fill-amber-400 text-amber-400' : 'text-gray-200',
+                                    ]"
+                                />
+                            </div>
+                            <p class="text-[10px] text-[#404945]/60 mt-1">{{ reviews.length }} ulasan</p>
+                        </div>
+                        <div>
+                            <h3 class="font-heading font-bold text-2xl text-[#003527]">Ulasan Wisatawan</h3>
+                            <p class="text-sm text-[#404945]/70 mt-0.5">Pengalaman nyata dari sesama penjelajah.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Review Form -->
+                <div v-if="canReview" class="bg-white rounded-3xl p-8 border border-emerald-100 shadow-sm">
+                    <h4 class="font-heading font-bold text-[#003527] mb-4">Tulis Ulasan Anda</h4>
+
+                    <div class="mb-5">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-[#404945]/70 mb-2">
+                            Rating Bintang <span class="text-rose-500">*</span>
+                        </label>
+                        <div class="flex items-center gap-1.5">
+                            <button
+                                v-for="n in 5"
+                                :key="n"
+                                type="button"
+                                @click="reviewForm.rating = n"
+                                @mouseenter="hoverRating = n"
+                                @mouseleave="hoverRating = 0"
+                                class="transition-transform hover:scale-110 cursor-pointer"
+                            >
+                                <Star
+                                    :class="[
+                                        'w-8 h-8 transition-colors',
+                                        (hoverRating ? n <= hoverRating : n <= reviewForm.rating)
+                                            ? 'fill-amber-400 text-amber-400'
+                                            : 'text-gray-200',
+                                    ]"
+                                />
+                            </button>
+                            <span v-if="reviewForm.rating > 0" class="ml-2 text-sm font-semibold text-[#003527]">
+                                {{ reviewForm.rating }}/5
+                            </span>
+                        </div>
+                        <p v-if="reviewForm.errors.rating" class="text-xs text-rose-500 mt-1.5">{{ reviewForm.errors.rating }}</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-[#404945]/70 mb-2">
+                            Komentar (Opsional)
+                        </label>
+                        <textarea
+                            v-model="reviewForm.komentar"
+                            rows="3"
+                            placeholder="Ceritakan pengalaman kunjungan Anda..."
+                            class="w-full px-4 py-3 bg-emerald-50 border border-emerald-100 rounded-2xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all resize-none"
+                        ></textarea>
+                        <p v-if="reviewForm.errors.komentar" class="text-xs text-rose-500 mt-1.5">{{ reviewForm.errors.komentar }}</p>
+                    </div>
+
+                    <div class="mt-4 flex justify-end">
+                        <button
+                            @click="submitReview"
+                            :disabled="reviewForm.processing"
+                            class="inline-flex items-center gap-2 px-6 py-3 bg-[#174c3c] hover:bg-[#003527] text-white text-sm font-semibold rounded-2xl shadow-lg shadow-emerald-200 transition-all disabled:opacity-50 cursor-pointer"
+                        >
+                            <Send class="w-4 h-4" />
+                            {{ reviewForm.processing ? 'Mengirim...' : 'Kirim Ulasan' }}
+                        </button>
+                    </div>
+                </div>
+
+                <div v-else-if="!$page.props.auth?.user" class="bg-white rounded-3xl p-8 border border-emerald-100 shadow-sm text-center">
+                    <p class="text-sm text-[#404945]/70 mb-4">
+                        Masuk dengan akun Anda untuk memberikan ulasan dan rating destinasi.
+                    </p>
+                    <Link
+                        :href="route('login')"
+                        class="inline-flex items-center gap-2 px-6 py-3 bg-[#174c3c] hover:bg-[#003527] text-white text-sm font-semibold rounded-2xl transition-all"
+                    >
+                        Masuk untuk Membagikan Ulasan
+                    </Link>
+                </div>
+
+                <!-- Reviews List -->
+                <div class="space-y-4">
+                    <article
+                        v-for="review in reviews"
+                        :key="review.id"
+                        class="bg-white rounded-2xl border border-emerald-100 p-6 shadow-sm"
+                    >
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-full bg-[#003527] text-white flex items-center justify-center text-xs font-bold">
+                                    {{ review.user?.name?.charAt(0)?.toUpperCase() || 'A' }}
+                                </div>
+                                <div>
+                                    <p class="text-sm font-semibold text-[#003527]">{{ review.user?.name }}</p>
+                                    <div class="flex items-center gap-0.5 mt-0.5">
+                                        <Star
+                                            v-for="n in 5"
+                                            :key="n"
+                                            :class="[
+                                                'w-3.5 h-3.5',
+                                                n <= review.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-200',
+                                            ]"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button
+                                v-if="review.user_id === $page.props.auth?.user?.id || $page.props.auth?.user?.role === 'admin'"
+                                @click="deleteReview(review)"
+                                class="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                title="Hapus Ulasan"
+                            >
+                                <Trash2 class="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        <p v-if="review.komentar" class="text-sm text-[#404945] leading-relaxed mt-3">
+                            {{ review.komentar }}
+                        </p>
+
+                        <p class="text-[11px] text-[#404945]/50 mt-3">
+                            Dipublikasikan pada {{ new Date(review.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) }}
+                        </p>
+                    </article>
+
+                    <div v-if="reviews.length === 0" class="text-center py-12 bg-white rounded-2xl border border-emerald-100">
+                        <Star class="w-12 h-12 text-gray-200 mx-auto mb-3" />
+                        <h4 class="text-base font-semibold text-[#003527]">Belum Ada Ulasan</h4>
+                        <p class="text-sm text-[#404945]/70 mt-1">Jadilah orang pertama yang memberikan ulasan untuk destinasi ini.</p>
                     </div>
                 </div>
             </div>

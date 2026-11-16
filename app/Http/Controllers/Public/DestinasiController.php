@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Destination;
 use App\Models\DestinationImage;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -35,7 +36,7 @@ class DestinasiController extends Controller
     /** Show destination detail page. */
     public function show(Destination $destination): Response
     {
-        $destination->load(['category', 'images']);
+        $destination->load(['category', 'images', 'reviews.user']);
 
         if ($destination->status !== 'aktif') {
             abort(404, 'Destinasi tidak tersedia.');
@@ -51,6 +52,7 @@ class DestinasiController extends Controller
         return Inertia::render('Destinasi/Detail', [
             'destination' => $destination,
             'relatedDestinations' => $relatedDestinations,
+            'canReview' => Auth::check() && !$destination->reviews()->where('user_id', Auth::id())->exists(),
         ]);
     }
 }

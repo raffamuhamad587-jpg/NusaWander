@@ -5,7 +5,7 @@ import draggable from 'vuedraggable'
 import PublicLayout from '@/Layouts/PublicLayout.vue'
 import {
     ArrowLeft, Plus, Trash2, GripVertical, Download, MapPin, Clock,
-    Wallet, FileText, ChevronDown, Check, X
+    Wallet, FileText, ChevronDown, Check, X, Share2, Eye, EyeOff
 } from 'lucide-vue-next'
 
 const props = defineProps({
@@ -126,6 +126,12 @@ const grandTotal = computed(() => itemsSubtotal.value + costsSubtotal.value)
                     >
                         <Download class="w-4 h-4" /> Export PDF
                     </a>
+                    <button
+                        @click="router.patch(route('trips.toggle-publish', trip.id), {}, { preserveScroll: true })"
+                        class="inline-flex items-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-2xl shadow-lg transition-all"
+                    >
+                        {{ trip.status === 'published' ? 'Tarik Publikasi' : 'Publikasikan' }}
+                    </button>
                 </div>
             </div>
 

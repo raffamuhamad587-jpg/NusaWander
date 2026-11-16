@@ -8,6 +8,8 @@ use Inertia\Inertia;
 Route::get('/', [\App\Http\Controllers\Public\DestinasiController::class, 'index'])->name('home');
 Route::get('/destinasi', [\App\Http\Controllers\Public\DestinasiController::class, 'index'])->name('destinasi.index');
 Route::get('/destinasi/{destination}', [\App\Http\Controllers\Public\DestinasiController::class, 'show'])->name('destinasi.show');
+Route::get('/inspirasi', [\App\Http\Controllers\TripController::class, 'publicIndex'])->name('trips.inspirasi');
+Route::get('/inspirasi/{trip}', [\App\Http\Controllers\TripController::class, 'publicShow'])->name('trips.public-show');
 
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
@@ -18,11 +20,16 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
+    // Reviews
+    Route::post('/destinasi/{destination}/reviews', [\App\Http\Controllers\ReviewController::class, 'store'])->name('reviews.store');
+    Route::delete('/reviews/{review}', [\App\Http\Controllers\ReviewController::class, 'destroy'])->name('reviews.destroy');
+
     // Trips & Itinerary Planner
     Route::get('/trips', [\App\Http\Controllers\TripController::class, 'index'])->name('trips.index');
     Route::get('/trips/create', [\App\Http\Controllers\TripController::class, 'create'])->name('trips.create');
     Route::post('/trips', [\App\Http\Controllers\TripController::class, 'store'])->name('trips.store');
     Route::get('/trips/{trip}', [\App\Http\Controllers\TripController::class, 'show'])->name('trips.show');
+    Route::patch('/trips/{trip}/toggle-publish', [\App\Http\Controllers\TripController::class, 'togglePublish'])->name('trips.toggle-publish');
     Route::delete('/trips/{trip}', [\App\Http\Controllers\TripController::class, 'destroy'])->name('trips.destroy');
 
     Route::post('/trips/{trip}/items', [\App\Http\Controllers\TripController::class, 'addItem'])->name('trips.items.add');

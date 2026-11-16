@@ -40,4 +40,23 @@ class Destination extends Model
     {
         return $this->hasMany(DestinationImage::class)->orderBy('urutan_tampil');
     }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class)->latest();
+    }
+
+    public function averageRating(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
+            get: fn () => $this->reviews()->avg('rating') ? round($this->reviews()->avg('rating'), 1) : 0
+        );
+    }
+
+    public function reviewsCount(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
+            get: fn () => $this->reviews()->count()
+        );
+    }
 }

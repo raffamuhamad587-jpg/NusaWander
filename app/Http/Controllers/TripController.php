@@ -239,6 +239,54 @@ class TripController extends Controller
     }
 
     /**
+     * Toggle trip publication status (draft <-> published).
+     */
+    public function togglePublish(Trip $trip): RedirectResponse
+    {
+        $this->authorizeUser($trip);
+
+        $newStatus = $trip->status === 'published' ? 'draft' : 'published';
+        $trip->update(['status' => $newStatus]);
+
+        $message = $newStatus === 'published'
+            ? 'Rencana perjalanan berhasil dipublikasikan ke Galeri Inspirasi!'
+            : 'Rencana perjalanan disimpan sebagai draf pribadi.';
+
+        return back()->with('success', $message);
+    }
+
+    /**
+     * Display public gallery of published trips.
+     */
+    public function publicIndex(): Response
+    {
+        $trips = Trip::with(['user', 'destination', 'itineraryItems'])
+            ->where('status', 'published')
+            ->latest()
+            ->paginate(12);
+
+        return Inertia::render('Trips/Inspirasi', [
+            'trips' => $trips,
+        ]);
+    }
+
+    /**
+     * Display public view of a published trip.
+     */
+    public function publicShow(Trip $trip): Response
+    {
+        if ($trip->status !== 'published' && $trip->user_id !== Auth::id()) {
+            abort(404, 'Itinerary belum dipublikasikan.');
+        }
+
+        $trip->load(['user', 'destination', 'itineraryItems.destination.images', 'costs']);
+
+        return Inertia::render('Trips/PublicDetail', [
+            'trip' => $trip,
+        ]);
+    }
+
+    /**
      * Remove the trip.
      */
     public function destroy(Trip $trip): RedirectResponse

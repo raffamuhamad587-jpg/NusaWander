@@ -31,6 +31,7 @@ function logout() {
                 <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-[#404945]">
                     <Link href="/" class="hover:text-[#174c3c] transition-colors">Beranda</Link>
                     <Link href="/destinasi" class="hover:text-[#174c3c] transition-colors">Katalog Destinasi</Link>
+                    <Link href="/inspirasi" class="hover:text-[#174c3c] transition-colors">Inspirasi Itinerary</Link>
                     <Link href="/trips" v-if="$page.props.auth?.user" class="hover:text-[#174c3c] transition-colors">Trip Saya</Link>
                 </nav>
 
@@ -80,6 +81,7 @@ function logout() {
             <div v-if="mobileOpen" class="md:hidden bg-white border-t border-emerald-100 px-6 py-4 space-y-3 shadow-lg">
                 <Link href="/" class="block text-sm font-medium text-[#003527] py-2" @click="mobileOpen = false">Beranda</Link>
                 <Link href="/destinasi" class="block text-sm font-medium text-[#003527] py-2" @click="mobileOpen = false">Katalog Destinasi</Link>
+                <Link href="/inspirasi" class="block text-sm font-medium text-[#003527] py-2" @click="mobileOpen = false">Inspirasi Itinerary</Link>
                 <Link v-if="$page.props.auth?.user" href="/trips" class="block text-sm font-medium text-[#003527] py-2" @click="mobileOpen = false">Trip Saya</Link>
                 <template v-if="!$page.props.auth?.user">
                     <Link :href="route('login')" class="block text-sm font-medium text-[#174c3c] py-2" @click="mobileOpen = false">Masuk</Link>
