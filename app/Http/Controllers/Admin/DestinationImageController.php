@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreDestinationImageRequest;
 use App\Models\Destination;
 use App\Models\DestinationImage;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class DestinationImageController extends Controller
@@ -14,17 +14,8 @@ class DestinationImageController extends Controller
     /**
      * Store new images for a destination.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StoreDestinationImageRequest $request): RedirectResponse
     {
-        $request->validate([
-            'destination_id' => 'required|exists:destinations,id',
-            'photos.*' => 'required|image|mimes:jpeg,png,jpg,webp|max:2048',
-            'keterangan' => 'nullable|string|max:255',
-        ], [
-            'photos.*.image' => 'File harus berupa gambar.',
-            'photos.*.max' => 'Ukuran file gambar maksimal 2MB.',
-        ]);
-
         $destination = Destination::findOrFail($request->destination_id);
         $currentMaxOrder = $destination->images()->max('urutan_tampil') ?? 0;
 

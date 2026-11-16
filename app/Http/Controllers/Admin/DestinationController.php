@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreDestinationRequest;
+use App\Http\Requests\Admin\UpdateDestinationRequest;
 use App\Models\Category;
 use App\Models\Destination;
 use App\Models\DestinationImage;
@@ -63,33 +65,9 @@ class DestinationController extends Controller
     /**
      * Store a newly created destination.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StoreDestinationRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'category_id' => 'required|exists:categories,id',
-            'nama' => 'required|string|max:150',
-            'deskripsi' => 'required|string',
-            'alamat' => 'required|string',
-            'kota' => 'required|string|max:100',
-            'latitude' => 'nullable|numeric|between:-90,90',
-            'longitude' => 'nullable|numeric|between:-180,180',
-            'jam_operasional' => 'nullable|string|max:100',
-            'estimasi_harga' => 'required|numeric|min:0',
-            'jenis_harga' => 'required|in:per_orang,per_kelompok',
-            'status' => 'required|in:aktif,nonaktif',
-            'photos.*' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
-        ], [
-            'category_id.required' => 'Kategori destinasi wajib dipilih.',
-            'nama.required' => 'Nama destinasi wajib diisi.',
-            'deskripsi.required' => 'Deskripsi destinasi wajib diisi.',
-            'alamat.required' => 'Alamat lengkap wajib diisi.',
-            'kota.required' => 'Nama kota/kabupaten wajib diisi.',
-            'estimasi_harga.required' => 'Estimasi harga wajib diisi.',
-            'photos.*.image' => 'File harus berupa gambar.',
-            'photos.*.max' => 'Ukuran gambar maksimal 2MB per file.',
-        ]);
-
-        $destination = Destination::create($validated);
+        $destination = Destination::create($request->validated());
 
         // Handle uploaded images if any
         if ($request->hasFile('photos')) {
@@ -125,23 +103,9 @@ class DestinationController extends Controller
     /**
      * Update the specified destination.
      */
-    public function update(Request $request, Destination $destination): RedirectResponse
+    public function update(UpdateDestinationRequest $request, Destination $destination): RedirectResponse
     {
-        $validated = $request->validate([
-            'category_id' => 'required|exists:categories,id',
-            'nama' => 'required|string|max:150',
-            'deskripsi' => 'required|string',
-            'alamat' => 'required|string',
-            'kota' => 'required|string|max:100',
-            'latitude' => 'nullable|numeric|between:-90,90',
-            'longitude' => 'nullable|numeric|between:-180,180',
-            'jam_operasional' => 'nullable|string|max:100',
-            'estimasi_harga' => 'required|numeric|min:0',
-            'jenis_harga' => 'required|in:per_orang,per_kelompok',
-            'status' => 'required|in:aktif,nonaktif',
-        ]);
-
-        $destination->update($validated);
+        $destination->update($request->validated());
 
         return redirect()->route('admin.destinations.index')
             ->with('success', 'Destinasi wisata berhasil diperbarui.');

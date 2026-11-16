@@ -19,7 +19,7 @@ class DashboardController extends Controller
         $totalCategories = Category::count();
         $totalTourists = User::where('role', 'wisatawan')->count();
 
-        $recentDestinations = Destination::with('category')
+        $recentDestinations = Destination::with('category', 'images')
             ->orderBy('updated_at', 'desc')
             ->take(5)
             ->get();

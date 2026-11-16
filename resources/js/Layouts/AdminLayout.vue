@@ -118,7 +118,7 @@ function logout() {
                     <p class="px-3 text-xs font-semibold text-white/40 uppercase tracking-wider">Pengaturan</p>
                     
                     <Link 
-                        href="/admin/destination-images"
+                        href="/admin/destinations"
                         class="flex items-center px-3 py-2.5 text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors"
                     >
                         <Image class="w-5 h-5 mr-3" />
