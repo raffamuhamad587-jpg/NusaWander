@@ -24,4 +24,17 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/dashboard', \App\Http\Controllers\Admin\DashboardController::class)->name('dashboard');
+
+    Route::resource('/categories', \App\Http\Controllers\Admin\CategoryController::class)
+        ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
+
+    Route::resource('/destinations', \App\Http\Controllers\Admin\DestinationController::class)
+        ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
+
+    Route::resource('/destination-images', \App\Http\Controllers\Admin\DestinationImageController::class)
+        ->only(['store', 'destroy']);
+});
+
 require __DIR__.'/auth.php';
