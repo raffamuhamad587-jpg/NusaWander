@@ -54,6 +54,16 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::resource('/destinations', \App\Http\Controllers\Admin\DestinationController::class)
         ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
 
+    Route::patch('/hotels/{hotel}/toggle-status', [\App\Http\Controllers\Admin\HotelController::class, 'toggleStatus'])
+        ->name('hotels.toggle-status');
+    Route::resource('/hotels', \App\Http\Controllers\Admin\HotelController::class)
+        ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
+
+    Route::patch('/foods/{food}/toggle-status', [\App\Http\Controllers\Admin\FoodController::class, 'toggleStatus'])
+        ->name('foods.toggle-status');
+    Route::resource('/foods', \App\Http\Controllers\Admin\FoodController::class)
+        ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
+
     Route::patch('/destination-images/{destination_image}/order', [\App\Http\Controllers\Admin\DestinationImageController::class, 'updateOrder'])
         ->name('destination-images.order');
 

@@ -110,7 +110,25 @@ function logout() {
                         class="flex items-center px-3 py-2.5 text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors"
                     >
                         <MapPin class="w-5 h-5 mr-3" />
-                        <span>Destinasi</span>
+                        <span>Kelola Wisata</span>
+                    </Link>
+
+                    <!-- Hotels -->
+                    <Link 
+                        href="/admin/hotels"
+                        class="flex items-center px-3 py-2.5 text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors"
+                    >
+                        <FileText class="w-5 h-5 mr-3" />
+                        <span>Kelola Hotel</span>
+                    </Link>
+
+                    <!-- Foods -->
+                    <Link 
+                        href="/admin/foods"
+                        class="flex items-center px-3 py-2.5 text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors"
+                    >
+                        <FileText class="w-5 h-5 mr-3" />
+                        <span>Kelola Kuliner</span>
                     </Link>
 
                     <hr class="my-3 border-white/10" />
