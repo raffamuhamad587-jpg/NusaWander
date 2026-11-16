@@ -5,14 +5,9 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/', function () {
-    return Inertia::render('Welcome', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
-    ]);
-});
+Route::get('/', [\App\Http\Controllers\Public\DestinasiController::class, 'index'])->name('home');
+Route::get('/destinasi', [\App\Http\Controllers\Public\DestinasiController::class, 'index'])->name('destinasi.index');
+Route::get('/destinasi/{destination}', [\App\Http\Controllers\Public\DestinasiController::class, 'show'])->name('destinasi.show');
 
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
@@ -22,6 +17,22 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Trips & Itinerary Planner
+    Route::get('/trips', [\App\Http\Controllers\TripController::class, 'index'])->name('trips.index');
+    Route::get('/trips/create', [\App\Http\Controllers\TripController::class, 'create'])->name('trips.create');
+    Route::post('/trips', [\App\Http\Controllers\TripController::class, 'store'])->name('trips.store');
+    Route::get('/trips/{trip}', [\App\Http\Controllers\TripController::class, 'show'])->name('trips.show');
+    Route::delete('/trips/{trip}', [\App\Http\Controllers\TripController::class, 'destroy'])->name('trips.destroy');
+
+    Route::post('/trips/{trip}/items', [\App\Http\Controllers\TripController::class, 'addItem'])->name('trips.items.add');
+    Route::patch('/trips/{trip}/items/reorder', [\App\Http\Controllers\TripController::class, 'reorderItems'])->name('trips.items.reorder');
+    Route::delete('/trips/{trip}/items/{item}', [\App\Http\Controllers\TripController::class, 'removeItem'])->name('trips.items.remove');
+
+    Route::post('/trips/{trip}/costs', [\App\Http\Controllers\TripController::class, 'saveCost'])->name('trips.costs.store');
+    Route::delete('/trips/{trip}/costs/{cost}', [\App\Http\Controllers\TripController::class, 'deleteCost'])->name('trips.costs.destroy');
+
+    Route::get('/trips/{trip}/export-pdf', [\App\Http\Controllers\TripController::class, 'exportPdf'])->name('trips.export-pdf');
 });
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {

@@ -51,4 +51,9 @@ class User extends Authenticatable
     {
         return $this->role === 'admin';
     }
+
+    public function trips(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Trip::class);
+    }
 }
