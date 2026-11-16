@@ -78,7 +78,7 @@ const page = usePage()
 
                         <div class="flex items-center justify-between">
                             <label class="flex items-center">
-                                <input type="checkbox" name="remember" v-model:checked="form.remember" class="w-4 h-4 rounded border-gray-400 focus:ring-emerald-500" />
+                                <input type="checkbox" name="remember" v-model="form.remember" class="w-4 h-4 rounded border-gray-400 focus:ring-emerald-500" />
                                 <span class="ml-2 text-sm text-gray-600">Remember me</span>
                             </label>
 

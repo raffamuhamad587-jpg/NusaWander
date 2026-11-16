@@ -1,4 +1,5 @@
 <script setup>
+import { Link } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import { MapPin, FileText, Users, BarChart2, Eye, Clock } from 'lucide-vue-next'
 
