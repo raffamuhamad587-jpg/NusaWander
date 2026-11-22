@@ -5,7 +5,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/', [\App\Http\Controllers\Public\DestinasiController::class, 'index'])->name('home');
+Route::get('/', [\App\Http\Controllers\Public\DestinasiController::class, 'home'])->name('home');
 Route::get('/destinasi', [\App\Http\Controllers\Public\DestinasiController::class, 'index'])->name('destinasi.index');
 Route::get('/destinasi/{destination}', [\App\Http\Controllers\Public\DestinasiController::class, 'show'])->name('destinasi.show');
 Route::get('/inspirasi', [\App\Http\Controllers\TripController::class, 'publicIndex'])->name('trips.inspirasi');
