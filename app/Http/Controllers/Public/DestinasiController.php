@@ -12,6 +12,22 @@ use Inertia\Response;
 
 class DestinasiController extends Controller
 {
+    /** Display the modern landing page. */
+    public function home(): Response
+    {
+        $destinations = Destination::with(['category', 'images'])
+            ->where('status', 'aktif')
+            ->latest()
+            ->take(8)
+            ->get();
+        $categories = Category::orderBy('nama_kategori')->get(['id', 'nama_kategori']);
+
+        return Inertia::render('Home', [
+            'featuredDestinations' => $destinations,
+            'categories' => $categories,
+        ]);
+    }
+
     /** Display a listing of public destinations. */
     public function index(): Response
     {

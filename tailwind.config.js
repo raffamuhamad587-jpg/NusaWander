@@ -13,20 +13,46 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Inter', ...defaultTheme.fontFamily.sans],
-                heading: ['Epilogue', ...defaultTheme.fontFamily.sans],
-                body: ['Inter', ...defaultTheme.fontFamily.sans],
+                sans: ['"Plus Jakarta Sans"', 'Inter', ...defaultTheme.fontFamily.sans],
+                heading: ['"Playfair Display"', 'Epilogue', ...defaultTheme.fontFamily.sans],
+                editorial: ['"Playfair Display"', 'Georgia', 'serif'],
+                body: ['"Plus Jakarta Sans"', 'Inter', ...defaultTheme.fontFamily.sans],
             },
             colors: {
+                ocean: {
+                    DEFAULT: '#173B57',
+                    dark: '#00253E',
+                    light: '#244e70',
+                },
+                teal: {
+                    DEFAULT: '#278C83',
+                    accent: '#2CB7A6',
+                    hover: '#1E6D66',
+                    light: '#E6F4F2',
+                },
+                cream: {
+                    DEFAULT: '#FFF8F1',
+                    sand: '#F4EBDD',
+                    soft: '#FFFEFA',
+                },
+                sage: {
+                    DEFAULT: '#A8BFA3',
+                    light: '#EBF2EA',
+                    dark: '#2A3D28',
+                },
+                coral: {
+                    DEFAULT: '#E98B70',
+                    light: '#FDEEEA',
+                },
                 brand: {
-                    bg: '#eefdf5',
-                    dark: '#003527',
-                    text: '#404945',
-                    input: '#e8f7ef',
-                    primary: '#174c3c',
-                    primaryHover: '#003527',
-                    footer: 'rgba(232,247,239,0.7)',
-                    header: 'rgba(238,253,245,0.85)',
+                    bg: '#FFF8F1',
+                    dark: '#00253E',
+                    text: '#1F2933',
+                    input: '#F4EBDD',
+                    primary: '#278C83',
+                    primaryHover: '#1E6D66',
+                    footer: '#FFF8F1',
+                    header: 'rgba(255,254,250,0.95)',
                 },
             },
             borderRadius: {
