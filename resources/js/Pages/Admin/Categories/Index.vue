@@ -1,10 +1,10 @@
 <script setup>
-import { ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useForm, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
-import { Plus, Edit2, Trash2, Folder, Layers, X, AlertCircle } from 'lucide-vue-next'
+import { Plus, Edit2, Trash2, Folder, X, AlertCircle } from 'lucide-vue-next'
 
-const props = defineProps({
+defineProps({
     categories: {
         type: Array,
         required: true,
@@ -47,11 +47,11 @@ function closeModal() {
 
 function submitForm() {
     if (isEditing.value && selectedCategory.value) {
-        form.put(route('admin.categories.update', selectedCategory.value.id), {
+        form.put(`/admin/categories/${selectedCategory.value.id}`, {
             onSuccess: () => closeModal(),
         })
     } else {
-        form.post(route('admin.categories.store'), {
+        form.post('/admin/categories', {
             onSuccess: () => closeModal(),
         })
     }
@@ -64,7 +64,7 @@ function confirmDelete(category) {
 
 function deleteCategory() {
     if (categoryToDelete.value) {
-        router.delete(route('admin.categories.destroy', categoryToDelete.value.id), {
+        router.delete(`/admin/categories/${categoryToDelete.value.id}`, {
             onSuccess: () => {
                 isDeleteModalOpen.value = false
                 categoryToDelete.value = null
@@ -72,145 +72,149 @@ function deleteCategory() {
         })
     }
 }
+
+function onKeydown(event) {
+    if (event.key === 'Escape') {
+        isModalOpen.value = false
+        isDeleteModalOpen.value = false
+    }
+}
+
+onMounted(() => document.addEventListener('keydown', onKeydown))
+onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
-    <AdminLayout>
+    <AdminLayout title="Kelola Kategori">
         <div class="space-y-6">
-            <!-- Header -->
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
                 <div>
-                    <h2 class="font-heading font-bold text-3xl text-[#003527] tracking-tight">Kategori Destinasi</h2>
-                    <p class="text-sm text-[#404945]/70 mt-1">Kelola kelompok wisata untuk mempermudah pencarian wisatawan</p>
+                    <h1 class="font-heading font-bold text-2xl sm:text-3xl text-brand-dark">Kelola Kategori</h1>
+                    <p class="text-sm text-brand-muted mt-1">Atur kategori destinasi untuk filter pencarian dan preferensi itinerary.</p>
                 </div>
                 <button
+                    type="button"
                     @click="openCreateModal"
-                    class="inline-flex items-center justify-center px-6 py-3 bg-[#174c3c] hover:bg-[#003527] text-white font-semibold text-sm rounded-2xl transition-all shadow-lg shadow-emerald-200 gap-2 cursor-pointer"
+                    class="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-brand-primary hover:bg-brand-primaryHover text-white font-semibold text-sm rounded-lg transition-colors min-h-[44px]"
                 >
-                    <Plus class="w-4 h-4" />
+                    <Plus class="w-4 h-4" aria-hidden="true" />
                     Tambah Kategori
                 </button>
             </div>
 
-            <!-- Categories Grid -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                <div
+                <article
                     v-for="cat in categories"
                     :key="cat.id"
-                    class="bg-white rounded-3xl p-6 border border-emerald-100 shadow-sm hover:shadow-lg transition-all relative group"
+                    class="bg-white rounded-xl p-5 border border-brand-dark/10 flex flex-col justify-between gap-4"
                 >
-                    <div class="flex items-start justify-between">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-[#174c3c] flex items-center justify-center font-bold">
-                                <Folder class="w-6 h-6" />
-                            </div>
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-start gap-3">
+                            <span class="w-10 h-10 rounded-lg bg-brand-bg text-brand-primary flex items-center justify-center shrink-0" aria-hidden="true">
+                                <Folder class="w-5 h-5" />
+                            </span>
                             <div>
-                                <h3 class="font-heading font-bold text-[#003527] text-lg">{{ cat.nama_kategori }}</h3>
-                                <span class="inline-flex items-center gap-1.5 px-3 py-1 mt-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-100">
-                                    <Layers class="w-3.5 h-3.5" />
-                                    {{ cat.destinations_count }} Destinasi
+                                <h2 class="font-heading font-bold text-base text-brand-dark">{{ cat.nama_kategori }}</h2>
+                                <span class="inline-block px-2 py-0.5 mt-1 rounded-md text-xs font-medium bg-brand-input text-brand-dark tabular-nums">
+                                    {{ cat.destinations_count }} destinasi
                                 </span>
                             </div>
                         </div>
 
-                        <!-- Actions -->
-                        <div class="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                        <div class="flex items-center gap-1">
                             <button
+                                type="button"
                                 @click="openEditModal(cat)"
-                                class="p-2.5 text-[#404945]/60 hover:text-[#174c3c] hover:bg-emerald-50 rounded-xl transition-colors cursor-pointer"
-                                title="Edit Kategori"
+                                :aria-label="`Edit kategori ${cat.nama_kategori}`"
+                                class="p-2 text-brand-muted hover:text-brand-dark hover:bg-brand-bg rounded-lg min-h-[40px] min-w-[40px] flex items-center justify-center"
+                                title="Edit kategori"
                             >
-                                <Edit2 class="w-4 h-4" />
+                                <Edit2 class="w-4 h-4" aria-hidden="true" />
                             </button>
                             <button
+                                type="button"
                                 @click="confirmDelete(cat)"
-                                class="p-2.5 text-[#404945]/60 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
-                                title="Hapus Kategori"
+                                :aria-label="`Hapus kategori ${cat.nama_kategori}`"
+                                class="p-2 text-brand-muted hover:text-coral-text hover:bg-coral-light rounded-lg min-h-[40px] min-w-[40px] flex items-center justify-center"
+                                title="Hapus kategori"
                             >
-                                <Trash2 class="w-4 h-4" />
+                                <Trash2 class="w-4 h-4" aria-hidden="true" />
                             </button>
                         </div>
                     </div>
 
-                    <p class="text-sm text-[#404945]/70 mt-5 leading-relaxed line-clamp-2">
-                        {{ cat.deskripsi || 'Tidak ada deskripsi untuk kategori ini.' }}
+                    <p class="text-xs text-brand-muted leading-relaxed line-clamp-2">
+                        {{ cat.deskripsi || 'Belum ada deskripsi untuk kategori ini.' }}
                     </p>
-                </div>
+                </article>
             </div>
 
-            <div v-if="categories.length === 0" class="text-center py-20 bg-white rounded-3xl border border-emerald-100">
-                <Folder class="w-16 h-16 text-emerald-200 mx-auto mb-4" />
-                <h4 class="font-heading font-bold text-xl text-[#003527]">Belum Ada Kategori</h4>
-                <p class="text-sm text-[#404945]/60 mt-2">Mulai buat kategori pertama untuk mengelompokkan destinasi wisata.</p>
+            <div v-if="categories.length === 0" class="text-center py-14 bg-white rounded-xl border border-brand-dark/10">
+                <Folder class="w-10 h-10 text-brand-muted mx-auto mb-3" aria-hidden="true" />
+                <h2 class="font-heading font-bold text-lg text-brand-dark">Belum ada kategori</h2>
+                <p class="text-sm text-brand-muted mt-1">Buat kategori pertama untuk mengelompokkan destinasi wisata.</p>
                 <button
+                    type="button"
                     @click="openCreateModal"
-                    class="mt-6 inline-flex items-center px-6 py-3 text-sm bg-[#174c3c] hover:bg-[#003527] text-white rounded-2xl transition-all shadow-lg shadow-emerald-200"
+                    class="mt-5 inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold bg-brand-primary hover:bg-brand-primaryHover text-white rounded-lg min-h-[44px]"
                 >
-                    <Plus class="w-4 h-4 mr-2" /> Tambah Kategori
+                    <Plus class="w-4 h-4" aria-hidden="true" /> Tambah Kategori
                 </button>
             </div>
 
             <!-- Create/Edit Modal -->
             <div
                 v-if="isModalOpen"
-                class="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="cat-modal-title"
+                class="fixed inset-0 z-50 overflow-y-auto bg-brand-dark/50 flex items-center justify-center p-4"
+                @click.self="closeModal"
             >
-                <div class="bg-white rounded-3xl max-w-md w-full p-7 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
-                    <div class="flex items-center justify-between pb-4 border-b border-emerald-100">
-                        <h3 class="font-heading font-bold text-lg text-[#003527]">
-                            {{ isEditing ? 'Edit Kategori Wisata' : 'Tambah Kategori Baru' }}
+                <div class="bg-white rounded-xl max-w-md w-full p-6 shadow-xl border border-brand-dark/10">
+                    <div class="flex items-center justify-between pb-3 border-b border-brand-dark/10">
+                        <h3 id="cat-modal-title" class="font-heading font-bold text-lg text-brand-dark">
+                            {{ isEditing ? 'Edit kategori wisata' : 'Tambah kategori baru' }}
                         </h3>
-                        <button @click="closeModal" class="text-[#404945]/50 hover:text-[#003527] p-1.5 rounded-xl hover:bg-emerald-50 transition-colors">
-                            <X class="w-5 h-5" />
+                        <button type="button" @click="closeModal" aria-label="Tutup dialog" class="p-2 text-brand-muted hover:text-brand-dark rounded-lg min-h-[40px] min-w-[40px] flex items-center justify-center">
+                            <X class="w-5 h-5" aria-hidden="true" />
                         </button>
                     </div>
 
-                    <form @submit.prevent="submitForm" class="mt-5 space-y-4">
+                    <form @submit.prevent="submitForm" class="mt-4 space-y-4">
                         <div>
-                            <label class="block text-xs font-bold uppercase tracking-wider text-[#404945]/70 mb-2">
-                                Nama Kategori <span class="text-rose-500">*</span>
+                            <label for="cat-name" class="block text-xs font-semibold text-brand-dark mb-1.5">
+                                Nama kategori <span class="text-coral-text">*</span>
                             </label>
                             <input
+                                id="cat-name"
                                 v-model="form.nama_kategori"
                                 type="text"
-                                placeholder="Contoh: Alam, Kuliner, Sejarah..."
-                                class="w-full px-4 py-3 bg-emerald-50 border border-emerald-100 rounded-2xl text-sm focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all"
-                                :class="{ 'border-rose-300 bg-rose-50/30': form.errors.nama_kategori }"
+                                placeholder="Misal: Alam, Kuliner, Sejarah"
+                                class="w-full px-3.5 py-2.5 bg-brand-bg border border-brand-dark/15 rounded-lg text-sm focus:bg-white focus:border-brand-primary min-h-[44px]"
                             />
-                            <p v-if="form.errors.nama_kategori" class="text-xs text-rose-500 mt-1.5">
-                                {{ form.errors.nama_kategori }}
-                            </p>
+                            <p v-if="form.errors.nama_kategori" class="text-xs text-coral-text mt-1">{{ form.errors.nama_kategori }}</p>
                         </div>
 
                         <div>
-                            <label class="block text-xs font-bold uppercase tracking-wider text-[#404945]/70 mb-2">
-                                Deskripsi (Opsional)
+                            <label for="cat-desc" class="block text-xs font-semibold text-brand-dark mb-1.5">
+                                Deskripsi (opsional)
                             </label>
                             <textarea
+                                id="cat-desc"
                                 v-model="form.deskripsi"
                                 rows="3"
-                                placeholder="Tuliskan keterangan singkat tentang kategori ini..."
-                                class="w-full px-4 py-3 bg-emerald-50 border border-emerald-100 rounded-2xl text-sm focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all resize-none"
-                                :class="{ 'border-rose-300 bg-rose-50/30': form.errors.deskripsi }"
+                                placeholder="Keterangan singkat kategori ini..."
+                                class="w-full px-3.5 py-2.5 bg-brand-bg border border-brand-dark/15 rounded-lg text-sm focus:bg-white focus:border-brand-primary resize-none"
                             ></textarea>
-                            <p v-if="form.errors.deskripsi" class="text-xs text-rose-500 mt-1.5">
-                                {{ form.errors.deskripsi }}
-                            </p>
+                            <p v-if="form.errors.deskripsi" class="text-xs text-coral-text mt-1">{{ form.errors.deskripsi }}</p>
                         </div>
 
-                        <div class="flex items-center justify-end gap-3 pt-5 border-t border-emerald-100">
-                            <button
-                                type="button"
-                                @click="closeModal"
-                                class="px-5 py-2.5 rounded-xl border border-emerald-100 text-sm font-semibold text-[#404945] hover:bg-emerald-50 cursor-pointer"
-                            >
+                        <div class="flex items-center justify-end gap-2 pt-3 border-t border-brand-dark/10">
+                            <button type="button" @click="closeModal" class="px-4 py-2.5 rounded-lg border border-brand-dark/15 text-sm font-semibold text-brand-dark hover:bg-brand-bg min-h-[44px]">
                                 Batal
                             </button>
-                            <button
-                                type="submit"
-                                :disabled="form.processing"
-                                class="px-6 py-2.5 rounded-xl bg-[#174c3c] hover:bg-[#003527] text-white text-sm font-semibold shadow-lg shadow-emerald-200 transition-all disabled:opacity-50 cursor-pointer"
-                            >
+                            <button type="submit" :disabled="form.processing" class="px-5 py-2.5 rounded-lg bg-brand-primary hover:bg-brand-primaryHover text-white text-sm font-semibold disabled:opacity-50 min-h-[44px]">
                                 {{ form.processing ? 'Menyimpan...' : (isEditing ? 'Perbarui' : 'Simpan') }}
                             </button>
                         </div>
@@ -221,28 +225,25 @@ function deleteCategory() {
             <!-- Delete Confirmation Modal -->
             <div
                 v-if="isDeleteModalOpen"
-                class="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="cat-delete-title"
+                class="fixed inset-0 z-50 bg-brand-dark/50 flex items-center justify-center p-4"
+                @click.self="isDeleteModalOpen = false"
             >
-                <div class="bg-white rounded-3xl max-w-sm w-full p-7 shadow-2xl text-center">
-                    <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4">
-                        <AlertCircle class="w-6 h-6" />
+                <div class="bg-white rounded-xl max-w-sm w-full p-6 shadow-xl border border-brand-dark/10 text-center">
+                    <div class="w-11 h-11 rounded-lg bg-coral-light text-coral-text flex items-center justify-center mx-auto mb-3" aria-hidden="true">
+                        <AlertCircle class="w-5 h-5" />
                     </div>
-                    <h3 class="font-heading font-bold text-lg text-[#003527]">Hapus Kategori?</h3>
-                    <p class="text-sm text-[#404945]/70 mt-2">
-                        Apakah Anda yakin ingin menghapus kategori <strong>"{{ categoryToDelete?.nama_kategori }}"</strong>?
+                    <h3 id="cat-delete-title" class="font-heading font-bold text-lg text-brand-dark">Hapus kategori?</h3>
+                    <p class="text-sm text-brand-muted mt-1.5">
+                        Yakin ingin menghapus kategori <strong>"{{ categoryToDelete?.nama_kategori }}"</strong>?
                     </p>
-
                     <div class="flex items-center justify-center gap-3 mt-6">
-                        <button
-                            @click="isDeleteModalOpen = false"
-                            class="px-5 py-2.5 rounded-xl border border-emerald-100 text-sm font-semibold text-[#404945] hover:bg-emerald-50 cursor-pointer"
-                        >
+                        <button type="button" @click="isDeleteModalOpen = false" class="px-4 py-2.5 rounded-lg border border-brand-dark/15 text-sm font-semibold text-brand-dark hover:bg-brand-bg min-h-[44px]">
                             Batal
                         </button>
-                        <button
-                            @click="deleteCategory"
-                            class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold shadow-sm shadow-rose-200 cursor-pointer"
-                        >
+                        <button type="button" @click="deleteCategory" class="px-4 py-2.5 rounded-lg bg-coral-text hover:bg-brand-dark text-white text-sm font-semibold min-h-[44px]">
                             Hapus
                         </button>
                     </div>

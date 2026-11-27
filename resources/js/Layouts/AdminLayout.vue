@@ -1,292 +1,325 @@
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from 'vue'
-import { Link } from '@inertiajs/vue3'
-import { Head } from '@inertiajs/vue3'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import {
-    Menu, X, ChevronDown, LogOut, User, Bell, Settings, Home, Layers, Image, MapPin, Package, Users, BarChart2, FileText, Plus, ChevronRight
+    LayoutDashboard,
+    Compass,
+    FolderKanban,
+    Camera,
+    BadgeDollarSign,
+    Settings,
+    LogOut,
+    Search,
+    Menu,
+    X,
+    ChevronDown,
+    UserRound,
 } from 'lucide-vue-next'
-import { usePage, router } from '@inertiajs/vue3'
+
+defineProps({
+    title: {
+        type: String,
+        default: '',
+    },
+})
+
+const page = usePage()
 
 const sidebarOpen = ref(false)
 const userMenuOpen = ref(false)
-const notifications = ref([])
-const showNotifications = ref(false)
-
+const searchTerm = ref('')
 const toasts = ref([])
 
+const navItems = [
+    { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
+    { label: 'Kelola Kategori', href: '/admin/categories', icon: FolderKanban },
+    { label: 'Kelola Destinasi', href: '/admin/destinations', icon: Compass },
+    { label: 'Kelola Foto', href: '/admin/destinations?photo_status=missing', icon: Camera },
+    { label: 'Kelola Estimasi Harga', href: '/admin/destinations?price_status=missing', icon: BadgeDollarSign },
+]
+
+const currentUrl = computed(() => page.url || '/')
+
+const currentLabel = computed(() => {
+    const exactMatch = navItems.find((item) => currentUrl.value === item.href)
+    if (exactMatch) return exactMatch.label
+
+    const basePath = currentUrl.value.split('?')[0]
+    const pathMatch = navItems
+        .filter((item) => !item.href.includes('?'))
+        .sort((a, b) => b.href.length - a.href.length)
+        .find((item) => basePath === item.href || basePath.startsWith(item.href + '/'))
+
+    return pathMatch?.label ?? 'Dashboard'
+})
+
+function isActive(href) {
+    if (href.includes('?')) {
+        return currentUrl.value === href
+    }
+    const basePath = currentUrl.value.split('?')[0]
+    if (currentUrl.value.includes('photo_status=missing') || currentUrl.value.includes('price_status=missing')) {
+        return false
+    }
+    return basePath === href || basePath.startsWith(href + '/')
+}
+
 function showToast(message, type = 'success') {
-    const id = Date.now()
+    const id = Date.now() + Math.random()
     toasts.value.push({ id, message, type })
     setTimeout(() => {
-        toasts.value = toasts.value.filter(t => t.id !== id)
+        toasts.value = toasts.value.filter((t) => t.id !== id)
     }, 5000)
 }
 
-const page = usePage()
-onMounted(() => {
-    if (page.props.flash?.success) showToast(page.props.flash.success, 'success')
-    if (page.props.flash?.error) showToast(page.props.flash.error, 'error')
-    if (page.props.flash?.info) showToast(page.props.flash.info, 'info')
-})
+function syncFlash(flash) {
+    if (!flash) return
+    if (flash.success) showToast(flash.success, 'success')
+    if (flash.error) showToast(flash.error, 'error')
+    if (flash.info) showToast(flash.info, 'info')
+}
 
-watch(() => page.props.flash, (newFlash) => {
-    if (newFlash?.success) showToast(newFlash.success, 'success')
-    if (newFlash?.error) showToast(newFlash.error, 'error')
-    if (newFlash?.info) showToast(newFlash.info, 'info')
-}, { deep: true })
+function onKeydown(event) {
+    if (event.key === 'Escape') {
+        sidebarOpen.value = false
+        userMenuOpen.value = false
+    }
+}
 
 function handleClickOutside(event) {
     if (!event.target.closest('.user-menu')) userMenuOpen.value = false
-    if (!event.target.closest('.notification-menu')) showNotifications.value = false
 }
 
 onMounted(() => {
+    syncFlash(page.props.flash)
     document.addEventListener('click', handleClickOutside)
-})
-onUnmounted(() => {
-    document.removeEventListener('click', handleClickOutside)
+    document.addEventListener('keydown', onKeydown)
 })
 
+onUnmounted(() => {
+    document.removeEventListener('click', handleClickOutside)
+    document.removeEventListener('keydown', onKeydown)
+})
+
+watch(() => page.props.flash, (flash) => syncFlash(flash), { deep: true })
+
+watch(() => page.url, () => {
+    sidebarOpen.value = false
+    userMenuOpen.value = false
+})
+
+function submitSearch() {
+    const term = searchTerm.value.trim()
+    router.get('/admin/destinations', term ? { search: term } : {}, { preserveState: false })
+}
+
 function logout() {
-    router.post(route('logout'))
+    router.post('/logout')
 }
 </script>
 
 <template>
-    <Head>
-        <title>{{ $page.props.title || 'Admin - NUSA WANDER' }}</title>
-    </Head>
+    <Head :title="title || currentLabel + ' | Admin NUSA WANDER'" />
 
-    <div class="min-h-screen bg-[#eefdf5] flex">
+    <div class="min-h-screen bg-brand-bg font-body text-brand-text">
         <!-- Sidebar -->
-        <aside 
+        <aside
+            aria-label="Navigasi admin"
             :class="[
-                'fixed inset-y-0 left-0 z-50 w-64 bg-[#003527] border-r border-[#003527] transform transition-transform duration-300 ease-in-out lg:translate-x-0',
-                sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+                'fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-white border-r border-brand-dark/10 transition-transform duration-200 lg:translate-x-0',
+                sidebarOpen ? 'translate-x-0' : '-translate-x-full',
             ]"
-            aria-label="Sidebar"
         >
-            <div class="flex flex-col h-full">
-                <!-- Logo -->
-                <div class="flex items-center justify-between h-16 px-4 border-b border-[#003527]/20">
-                    <Link href="/admin/dashboard" class="flex items-center space-x-2">
-                        <span class="w-8 h-8 rounded-xl bg-emerald-500 flex items-center justify-center">
-                            <Layers class="w-5 h-5 text-white" />
-                        </span>
-                        <span class="text-xl font-heading font-semibold text-white tracking-tight">NUSA WANDER</span>
-                    </Link>
-                    <button 
-                        @click="sidebarOpen = false"
-                        class="lg:hidden p-2 rounded-md text-white/70 hover:text-white hover:bg-white/10"
-                        aria-label="Close sidebar"
-                    >
-                        <X class="w-5 h-5" />
-                    </button>
+            <!-- Brand -->
+            <div class="flex items-center justify-between px-5 py-5 border-b border-brand-dark/10">
+                <Link href="/admin/dashboard" class="flex items-center gap-2.5">
+                    <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-dark text-white" aria-hidden="true">
+                        <Compass class="h-5 w-5" />
+                    </span>
+                    <span class="leading-tight">
+                        <span class="block font-heading text-sm font-bold text-brand-dark">NUSA WANDER</span>
+                        <span class="block text-[11px] font-medium text-brand-muted">Portal Admin</span>
+                    </span>
+                </Link>
+                <button
+                    type="button"
+                    class="rounded-lg p-2 text-brand-muted hover:bg-brand-bg lg:hidden min-h-[40px] min-w-[40px] flex items-center justify-center"
+                    aria-label="Tutup menu admin"
+                    @click="sidebarOpen = false"
+                >
+                    <X class="h-4 w-4" aria-hidden="true" />
+                </button>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="flex-1 overflow-y-auto px-3.5 py-4 space-y-5">
+                <div>
+                    <p class="px-2.5 pb-2 text-[11px] font-semibold text-brand-muted">Manajemen Katalog</p>
+                    <div class="space-y-1">
+                        <Link
+                            v-for="item in navItems"
+                            :key="item.href"
+                            :href="item.href"
+                            :aria-current="isActive(item.href) ? 'page' : undefined"
+                            :class="[
+                                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors min-h-[44px]',
+                                isActive(item.href)
+                                    ? 'bg-brand-primary text-white font-semibold'
+                                    : 'text-brand-text hover:bg-brand-bg',
+                            ]"
+                        >
+                            <component :is="item.icon" class="h-4 w-4 shrink-0" aria-hidden="true" />
+                            <span>{{ item.label }}</span>
+                        </Link>
+                    </div>
                 </div>
 
-                <!-- Navigation -->
-                <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-                    <!-- Dashboard -->
-                    <Link 
-                        href="/admin/dashboard"
-                        class="flex items-center px-3 py-2.5 text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors"
-                    >
-                        <BarChart2 class="w-5 h-5 mr-3" />
-                        <span>Dashboard</span>
-                    </Link>
-
-                    <!-- Categories -->
-                    <Link 
-                        href="/admin/categories"
-                        class="flex items-center px-3 py-2.5 text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors"
-                    >
-                        <FileText class="w-5 h-5 mr-3" />
-                        <span>Kategori</span>
-                    </Link>
-
-                    <!-- Destinations -->
-                    <Link 
-                        href="/admin/destinations"
-                        class="flex items-center px-3 py-2.5 text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors"
-                    >
-                        <MapPin class="w-5 h-5 mr-3" />
-                        <span>Kelola Wisata</span>
-                    </Link>
-
-                    <!-- Hotels -->
-                    <Link 
-                        href="/admin/hotels"
-                        class="flex items-center px-3 py-2.5 text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors"
-                    >
-                        <FileText class="w-5 h-5 mr-3" />
-                        <span>Kelola Hotel</span>
-                    </Link>
-
-                    <!-- Foods -->
-                    <Link 
-                        href="/admin/foods"
-                        class="flex items-center px-3 py-2.5 text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors"
-                    >
-                        <FileText class="w-5 h-5 mr-3" />
-                        <span>Kelola Kuliner</span>
-                    </Link>
-
-                    <hr class="my-3 border-white/10" />
-                    
-                    <p class="px-3 text-xs font-semibold text-white/40 uppercase tracking-wider">Pengaturan</p>
-                    
-                    <Link 
-                        href="/admin/destinations"
-                        class="flex items-center px-3 py-2.5 text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors"
-                    >
-                        <Image class="w-5 h-5 mr-3" />
-                        <span>Galeri Foto</span>
-                    </Link>
-                </nav>
-
-                <!-- Footer -->
-                <div class="p-4 border-t border-white/10">
-                    <p class="text-xs text-white/40 text-center">NusaWander Admin v1.0</p>
+                <div>
+                    <p class="px-2.5 pb-2 text-[11px] font-semibold text-brand-muted">Akun &amp; Situs</p>
+                    <div class="space-y-1">
+                        <Link
+                            href="/"
+                            class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-brand-text hover:bg-brand-bg min-h-[44px]"
+                        >
+                            <Compass class="h-4 w-4 shrink-0" aria-hidden="true" />
+                            <span>Lihat Situs Publik</span>
+                        </Link>
+                        <Link
+                            href="/profile"
+                            :class="[
+                                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors min-h-[44px]',
+                                isActive('/profile') ? 'bg-brand-primary text-white font-semibold' : 'text-brand-text hover:bg-brand-bg',
+                            ]"
+                        >
+                            <Settings class="h-4 w-4 shrink-0" aria-hidden="true" />
+                            <span>Profil Admin</span>
+                        </Link>
+                    </div>
                 </div>
+            </nav>
+
+            <!-- Logout -->
+            <div class="border-t border-brand-dark/10 p-3.5">
+                <button
+                    type="button"
+                    class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-coral-text hover:bg-coral-light transition-colors min-h-[44px]"
+                    @click="logout"
+                >
+                    <LogOut class="h-4 w-4 shrink-0" aria-hidden="true" />
+                    <span>Keluar</span>
+                </button>
             </div>
         </aside>
 
-        <!-- Sidebar Overlay (Mobile) -->
-        <div 
+        <!-- Mobile overlay -->
+        <div
             v-if="sidebarOpen"
-            @click="sidebarOpen = false"
-            class="fixed inset-0 z-40 bg-black/50 lg:hidden"
+            class="fixed inset-0 z-40 bg-brand-dark/45 lg:hidden"
             aria-hidden="true"
-        ></div>
+            @click="sidebarOpen = false"
+        />
 
-        <!-- Main Content -->
-        <div class="flex-1 flex flex-col min-w-0 lg:ml-64">
+        <!-- Main -->
+        <div class="flex min-h-screen flex-col lg:ml-64">
             <!-- Topbar -->
-            <header class="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-emerald-100">
-                <div class="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
-                    <!-- Mobile Menu Button -->
-                    <button 
+            <header class="sticky top-0 z-30 border-b border-brand-dark/10 bg-white">
+                <div class="flex h-16 items-center gap-4 px-4 sm:px-6">
+                    <button
+                        type="button"
+                        :aria-expanded="sidebarOpen"
+                        class="inline-flex items-center gap-1.5 rounded-lg border border-brand-dark/15 px-3 py-2 text-xs font-semibold text-brand-dark hover:bg-brand-bg lg:hidden min-h-[44px]"
                         @click="sidebarOpen = true"
-                        class="lg:hidden p-2 rounded-md text-[#003527]/70 hover:text-[#003527] hover:bg-emerald-50"
-                        aria-label="Open sidebar"
                     >
-                        <Menu class="w-6 h-6" />
+                        <Menu class="h-4 w-4" aria-hidden="true" />
+                        <span>Menu</span>
                     </button>
 
-                    <!-- Search / Title -->
-                    <div class="flex-1 lg:flex-none">
-                        <h1 class="text-lg font-heading font-semibold text-[#003527] truncate">
-                            {{ $page.props.title || 'Admin Panel' }}
-                        </h1>
+                    <!-- Breadcrumb -->
+                    <div class="hidden items-center gap-2 text-sm sm:flex">
+                        <span class="text-brand-muted">Admin</span>
+                        <span class="text-brand-muted/50">/</span>
+                        <span class="font-semibold text-brand-dark">{{ currentLabel }}</span>
                     </div>
 
-                    <!-- Right Side -->
-                    <div class="flex items-center space-x-4">
-                        <!-- Notifications -->
-                        <div class="relative notification-menu">
-                            <button 
-                                @click="showNotifications = !showNotifications"
-                                class="p-2 rounded-full text-[#003527]/60 hover:text-[#003527] hover:bg-emerald-50 transition-colors relative"
-                                aria-label="Notifications"
+                    <!-- Search -->
+                    <form class="mx-auto hidden w-full max-w-md md:block" @submit.prevent="submitSearch">
+                        <label for="admin-topbar-search" class="sr-only">Cari destinasi</label>
+                        <div class="relative">
+                            <Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-muted" aria-hidden="true" />
+                            <input
+                                id="admin-topbar-search"
+                                v-model="searchTerm"
+                                type="search"
+                                placeholder="Cari nama destinasi atau kota..."
+                                class="w-full rounded-lg border border-brand-dark/15 bg-brand-bg py-2 pl-9 pr-4 text-sm text-brand-dark placeholder:text-brand-muted focus:border-brand-primary focus:bg-white min-h-[40px]"
                             >
-                                <Bell class="w-5 h-5" />
-                                <span v-if="notifications.length > 0" class="absolute top-1 right-1 w-4 h-4 bg-rose-500 text-white text-xs rounded-full flex items-center justify-center">
-                                    {{ notifications.length }}
-                                </span>
-                            </button>
-                            <div 
-                                v-if="showNotifications"
-                                class="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-emerald-100 py-2 z-50"
-                            >
-                                <p class="px-4 py-2 text-sm font-medium text-[#003527] border-b border-emerald-100">Notifikasi</p>
-                                <p v-if="notifications.length === 0" class="px-4 py-4 text-sm text-gray-500 text-center">Tidak ada notifikasi</p>
-                                <div v-for="notif in notifications" :key="notif.id" class="px-4 py-3 hover:bg-emerald-50">
-                                    <p class="text-sm text-[#003527]">{{ notif.message }}</p>
-                                    <p class="text-xs text-gray-500">{{ notif.time }}</p>
-                                </div>
-                            </div>
                         </div>
+                    </form>
 
-                        <!-- User Menu -->
-                        <div class="relative user-menu">
-                            <button 
-                                @click="userMenuOpen = !userMenuOpen"
-                                class="flex items-center space-x-2 p-2 rounded-xl hover:bg-emerald-50 transition-colors"
-                                aria-label="User menu"
-                            >
-                                <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
-                                    <User class="w-5 h-5 text-emerald-600" />
-                                </div>
-                                <span class="hidden md:block text-sm font-medium text-[#003527]">{{ $page.props.auth.user?.name }}</span>
-                                <ChevronDown class="w-4 h-4 text-gray-500 hidden md:block" />
-                            </button>
+                    <!-- User dropdown -->
+                    <div class="ml-auto user-menu relative">
+                        <button
+                            type="button"
+                            :aria-expanded="userMenuOpen"
+                            class="flex items-center gap-2 rounded-lg border border-brand-dark/10 px-2.5 py-1.5 hover:bg-brand-bg transition-colors min-h-[44px]"
+                            @click="userMenuOpen = !userMenuOpen"
+                        >
+                            <span class="flex h-7 w-7 items-center justify-center rounded-md bg-brand-dark text-white" aria-hidden="true">
+                                <UserRound class="h-4 w-4" />
+                            </span>
+                            <span class="hidden text-left leading-tight sm:block">
+                                <span class="block text-xs font-semibold text-brand-dark">{{ page.props.auth?.user?.name || 'Admin' }}</span>
+                                <span class="block text-[11px] text-brand-muted">Administrator</span>
+                            </span>
+                            <ChevronDown class="hidden h-3.5 w-3.5 text-brand-muted sm:block" aria-hidden="true" />
+                        </button>
 
-                            <div 
-                                v-if="userMenuOpen"
-                                class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-emerald-100 py-2 z-50"
-                            >
-                                <div class="px-4 py-3 border-b border-emerald-100">
-                                    <p class="text-sm font-medium text-[#003527]">{{ $page.props.auth.user?.name }}</p>
-                                    <p class="text-xs text-gray-500">{{ $page.props.auth.user?.email }}</p>
-                                    <span class="inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700">
-                                        {{ $page.props.auth.user?.role === 'admin' ? 'Administrator' : 'Wisatawan' }}
-                                    </span>
-                                </div>
-                                <Link 
-                                    href="/profile"
-                                    class="flex items-center px-4 py-2 text-sm text-[#003527]/80 hover:bg-emerald-50"
-                                >
-                                    <Settings class="w-4 h-4 mr-3" />
-                                    Pengaturan Profil
-                                </Link>
-                                <hr class="my-2 border-emerald-100" />
-                                <button 
-                                    @click="logout"
-                                    class="flex items-center w-full px-4 py-2 text-sm text-rose-600 hover:bg-rose-50"
-                                >
-                                    <LogOut class="w-4 h-4 mr-3" />
-                                    Keluar
-                                </button>
+                        <div
+                            v-if="userMenuOpen"
+                            class="absolute right-0 top-full z-50 mt-2 w-56 rounded-xl border border-brand-dark/10 bg-white p-1.5 shadow-lg"
+                        >
+                            <div class="border-b border-brand-dark/10 px-3 py-2">
+                                <p class="truncate text-sm font-semibold text-brand-dark">{{ page.props.auth?.user?.name }}</p>
+                                <p class="truncate text-xs text-brand-muted">{{ page.props.auth?.user?.email }}</p>
                             </div>
+                            <Link href="/profile" class="mt-1 block rounded-lg px-3 py-2 text-sm text-brand-text hover:bg-brand-bg">
+                                Pengaturan Profil
+                            </Link>
+                            <button
+                                type="button"
+                                class="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-coral-text hover:bg-coral-light"
+                                @click="logout"
+                            >
+                                Keluar
+                            </button>
                         </div>
                     </div>
                 </div>
             </header>
 
-            <!-- Page Content -->
-            <main class="flex-1 p-4 sm:p-6 lg:p-8">
-                <!-- Toast Notifications -->
-                <div class="fixed top-4 right-4 z-50 space-y-2 pointer-events-none">
-                    <div 
-                        v-for="toast in toasts" 
+            <!-- Content -->
+            <main class="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+                <slot />
+
+                <!-- Toasts -->
+                <div role="status" aria-live="polite" class="pointer-events-none fixed right-4 top-20 z-[60] space-y-2">
+                    <div
+                        v-for="toast in toasts"
                         :key="toast.id"
                         :class="[
-                            'pointer-events-auto animate-slide-in flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg min-w-[300px] max-w-md',
-                            toast.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : '',
-                            toast.type === 'error' ? 'bg-rose-50 text-rose-800 border border-rose-200' : '',
-                            toast.type === 'info' ? 'bg-blue-50 text-blue-800 border border-blue-200' : '',
+                            'pointer-events-auto flex min-w-[260px] max-w-md items-start gap-3 rounded-xl border px-4 py-3 shadow-lg',
+                            toast.type === 'success' ? 'border-brand-primary/30 bg-white text-brand-dark' : '',
+                            toast.type === 'error' ? 'border-coral/40 bg-coral-light text-coral-text' : '',
+                            toast.type === 'info' ? 'border-brand-dark/20 bg-white text-brand-dark' : '',
                         ]"
                     >
                         <span class="flex-1 text-sm">{{ toast.message }}</span>
-                        <button 
-                            @click="toasts = toasts.filter(t => t.id !== toast.id)"
-                            class="text-current opacity-50 hover:opacity-100"
-                        >
-                            <X class="w-4 h-4" />
+                        <button type="button" aria-label="Tutup notifikasi" class="opacity-70 hover:opacity-100" @click="toasts = toasts.filter((t) => t.id !== toast.id)">
+                            <X class="h-4 w-4" aria-hidden="true" />
                         </button>
                     </div>
                 </div>
-
-                <slot />
             </main>
         </div>
     </div>
-
-    <style scoped>
-    @keyframes slide-in {
-        from { opacity: 0; transform: translateX(100%); }
-        to { opacity: 1; transform: translateX(0); }
-    }
-    .animate-slide-in { animation: slide-in 0.3s ease-out; }
-    </style>
 </template>

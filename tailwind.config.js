@@ -13,10 +13,9 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['"Plus Jakarta Sans"', 'Inter', ...defaultTheme.fontFamily.sans],
-                heading: ['"Playfair Display"', 'Epilogue', ...defaultTheme.fontFamily.sans],
-                editorial: ['"Playfair Display"', 'Georgia', 'serif'],
-                body: ['"Plus Jakarta Sans"', 'Inter', ...defaultTheme.fontFamily.sans],
+                sans: ['Poppins', ...defaultTheme.fontFamily.sans],
+                heading: ['Poppins', ...defaultTheme.fontFamily.sans],
+                body: ['Poppins', ...defaultTheme.fontFamily.sans],
             },
             colors: {
                 ocean: {
@@ -25,9 +24,9 @@ export default {
                     light: '#244e70',
                 },
                 teal: {
-                    DEFAULT: '#278C83',
-                    accent: '#2CB7A6',
-                    hover: '#1E6D66',
+                    DEFAULT: '#1E6D66',
+                    accent: '#278C83',
+                    hover: '#16544F',
                     light: '#E6F4F2',
                 },
                 cream: {
@@ -35,28 +34,27 @@ export default {
                     sand: '#F4EBDD',
                     soft: '#FFFEFA',
                 },
-                sage: {
-                    DEFAULT: '#A8BFA3',
-                    light: '#EBF2EA',
-                    dark: '#2A3D28',
-                },
                 coral: {
                     DEFAULT: '#E98B70',
+                    text: '#9A3412',
                     light: '#FDEEEA',
                 },
                 brand: {
                     bg: '#FFF8F1',
+                    surface: '#FFFFFF',
                     dark: '#00253E',
                     text: '#1F2933',
+                    muted: '#475569',
                     input: '#F4EBDD',
-                    primary: '#278C83',
-                    primaryHover: '#1E6D66',
-                    footer: '#FFF8F1',
-                    header: 'rgba(255,254,250,0.95)',
+                    primary: '#1E6D66',
+                    primaryHover: '#16544F',
+                    accent: '#E98B70',
+                    footer: '#F4EBDD',
+                    header: 'rgba(255, 254, 250, 0.96)',
                 },
             },
             borderRadius: {
-                'card': '1.5rem', // 24px
+                card: '0.75rem',
             },
         },
     },

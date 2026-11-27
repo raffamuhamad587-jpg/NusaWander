@@ -1,112 +1,138 @@
 <script setup>
-import Checkbox from '@/Components/Checkbox.vue'
 import InputError from '@/Components/InputError.vue'
 import InputLabel from '@/Components/InputLabel.vue'
-import PrimaryButton from '@/Components/PrimaryButton.vue'
-import TextInput from '@/Components/TextInput.vue'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
 
 const form = useForm({
     name: '',
     email: '',
+    phone: '',
     password: '',
     password_confirmation: '',
 })
 
 const submit = () => {
-    form.post(route('register'), {
+    form.post('/register', {
         onFinish: () => form.reset('password', 'password_confirmation'),
     })
 }
 </script>
 
 <template>
-    <Head title="Daftar Akun" />
+    <Head title="Daftar Akun | NUSA WANDER" />
 
     <GuestLayout>
-        <div class="relative w-full max-w-[448px] px-6 py-12">
-            <!-- Overlay -->
-            <div class="absolute inset-0 -z-10 bg-gradient-to-br from-[#eefdf5] to-white rounded-3xl shadow-2xl overflow-hidden">
-                <div class="absolute top-0 right-0 w-80 h-80 bg-emerald-100 rounded-full blur-[120px] opacity-50 -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2" />
-            </div>
-
-            <!-- Card content -->
-            <div class="relative z-10">
-                <div class="text-center mb-10">
-                    <h1 class="font-heading font-semibold text-3xl md:text-4xl text-[#003527] tracking-tight mb-2">
-                        Buat Akun Baru
+        <div class="w-full max-w-4xl bg-white rounded-xl border border-brand-dark/10 shadow-sm overflow-hidden grid grid-cols-1 lg:grid-cols-12">
+            <!-- Left brand info panel (R-17 & R-36: real features only, no fake counts) -->
+            <div class="lg:col-span-5 bg-brand-dark text-white p-7 sm:p-9 flex flex-col justify-between gap-8">
+                <div class="space-y-4">
+                    <h1 class="font-heading font-bold text-2xl sm:text-3xl leading-snug">
+                        Mulai rencanakan perjalanan Anda di Indonesia.
                     </h1>
-                    <p class="text-lg text-[#404945] leading-relaxed">
-                        Nikmati kemudahan merencanakan liburan Anda
+                    <p class="text-sm text-white/80 leading-relaxed">
+                        Dengan akun wisatawan, Anda dapat menyusun itinerary per hari, menghitung estimasi biaya serta sisa anggaran, dan menyimpan rencana perjalanan agar mudah dibuka kembali.
                     </p>
                 </div>
 
-                <form @submit.prevent="submit" class="space-y-6">
+                <ul class="space-y-2.5 text-xs text-white/85 border-t border-white/15 pt-5">
+                    <li>Susunan kunjungan per hari otomatis dari katalog</li>
+                    <li>Rincian biaya tiket, transport, penginapan, dan kuliner</li>
+                    <li>Simpan banyak rencana perjalanan dan ekspor ke PDF</li>
+                </ul>
+            </div>
+
+            <!-- Right Form -->
+            <div class="lg:col-span-7 p-6 sm:p-9">
+                <div class="mb-6">
+                    <h2 class="font-heading font-bold text-2xl text-brand-dark">Daftar akun baru</h2>
+                    <p class="text-sm text-brand-muted mt-1">Isi data diri Anda untuk membuat akun wisatawan.</p>
+                </div>
+
+                <form @submit.prevent="submit" class="space-y-4">
                     <div>
-                        <InputLabel for="name" value="Nama Lengkap" />
-                        <TextInput
+                        <InputLabel for="name" value="Nama lengkap" class="text-xs font-semibold text-brand-dark mb-1.5" />
+                        <input
                             id="name"
                             type="text"
                             v-model="form.name"
                             required
                             autofocus
                             autocomplete="name"
-                            class="w-full px-4 py-3 bg-[#e8f7ef] border border-transparent rounded-3xl text-base placeholder-gray-400 focus:bg-white focus:border-emerald-600/50 focus:outline-none transition-all"
+                            placeholder="Nama lengkap Anda"
+                            class="w-full px-3.5 py-2.5 bg-brand-bg border border-brand-dark/15 rounded-lg text-sm text-brand-dark placeholder-brand-muted/60 focus:bg-white focus:border-brand-primary min-h-[44px]"
                         />
-                        <InputError class="mt-2" :message="form.errors.name" />
+                        <InputError class="mt-1.5 text-xs" :message="form.errors.name" />
                     </div>
 
                     <div>
-                        <InputLabel for="email" value="Email" />
-                        <TextInput
+                        <InputLabel for="email" value="Email" class="text-xs font-semibold text-brand-dark mb-1.5" />
+                        <input
                             id="email"
                             type="email"
                             v-model="form.email"
                             required
                             autocomplete="username"
-                            class="w-full px-4 py-3 bg-[#e8f7ef] border border-transparent rounded-3xl text-base placeholder-gray-400 focus:bg-white focus:border-emerald-600/50 focus:outline-none transition-all"
+                            placeholder="nama@email.com"
+                            class="w-full px-3.5 py-2.5 bg-brand-bg border border-brand-dark/15 rounded-lg text-sm text-brand-dark placeholder-brand-muted/60 focus:bg-white focus:border-brand-primary min-h-[44px]"
                         />
-                        <InputError class="mt-2" :message="form.errors.email" />
+                        <InputError class="mt-1.5 text-xs" :message="form.errors.email" />
                     </div>
 
                     <div>
-                        <InputLabel for="password" value="Password" />
-                        <TextInput
-                            id="password"
-                            type="password"
-                            v-model="form.password"
-                            required
-                            autocomplete="new-password"
-                            class="w-full px-4 py-3 bg-[#e8f7ef] border border-transparent rounded-3xl text-base placeholder-gray-400 focus:bg-white focus:border-emerald-600/50 focus:outline-none transition-all"
+                        <InputLabel for="phone" value="Nomor telepon (opsional)" class="text-xs font-semibold text-brand-dark mb-1.5" />
+                        <input
+                            id="phone"
+                            type="tel"
+                            v-model="form.phone"
+                            placeholder="08xxxxxxxxxx"
+                            class="w-full px-3.5 py-2.5 bg-brand-bg border border-brand-dark/15 rounded-lg text-sm text-brand-dark placeholder-brand-muted/60 focus:bg-white focus:border-brand-primary min-h-[44px]"
                         />
-                        <InputError class="mt-2" :message="form.errors.password" />
+                        <InputError class="mt-1.5 text-xs" :message="form.errors.phone" />
                     </div>
 
-                    <div>
-                        <InputLabel for="password_confirmation" value="Konfirmasi Password" />
-                        <TextInput
-                            id="password_confirmation"
-                            type="password"
-                            v-model="form.password_confirmation"
-                            required
-                            autocomplete="new-password"
-                            class="w-full px-4 py-3 bg-[#e8f7ef] border border-transparent rounded-3xl text-base placeholder-gray-400 focus:bg-white focus:border-emerald-600/50 focus:outline-none transition-all"
-                        />
-                        <InputError class="mt-2" :message="form.errors.password_confirmation" />
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <InputLabel for="password" value="Kata sandi" class="text-xs font-semibold text-brand-dark mb-1.5" />
+                            <input
+                                id="password"
+                                type="password"
+                                v-model="form.password"
+                                required
+                                autocomplete="new-password"
+                                placeholder="Minimal 8 karakter"
+                                class="w-full px-3.5 py-2.5 bg-brand-bg border border-brand-dark/15 rounded-lg text-sm text-brand-dark placeholder-brand-muted/60 focus:bg-white focus:border-brand-primary min-h-[44px]"
+                            />
+                            <InputError class="mt-1.5 text-xs" :message="form.errors.password" />
+                        </div>
+
+                        <div>
+                            <InputLabel for="password_confirmation" value="Konfirmasi kata sandi" class="text-xs font-semibold text-brand-dark mb-1.5" />
+                            <input
+                                id="password_confirmation"
+                                type="password"
+                                v-model="form.password_confirmation"
+                                required
+                                autocomplete="new-password"
+                                placeholder="Ulangi kata sandi"
+                                class="w-full px-3.5 py-2.5 bg-brand-bg border border-brand-dark/15 rounded-lg text-sm text-brand-dark placeholder-brand-muted/60 focus:bg-white focus:border-brand-primary min-h-[44px]"
+                            />
+                            <InputError class="mt-1.5 text-xs" :message="form.errors.password_confirmation" />
+                        </div>
                     </div>
 
-                    <PrimaryButton
-                        class="w-full px-6 py-3 bg-[#174c3c] hover:bg-[#003527] text-white font-medium text-sm rounded-full shadow-sm shadow-emerald-200 transition-all disabled:opacity-50"
+                    <button
+                        type="submit"
                         :disabled="form.processing"
+                        class="w-full mt-2 px-5 py-3 bg-brand-primary hover:bg-brand-primaryHover active:bg-brand-dark text-white font-semibold text-sm rounded-lg transition-colors disabled:opacity-50 min-h-[44px]"
                     >
-                        {{ form.processing ? 'Mendaftarkan...' : 'Daftar Sekarang' }}
-                    </PrimaryButton>
+                        {{ form.processing ? 'Membuat akun...' : 'Buat Akun Wisatawan' }}
+                    </button>
 
-                    <p class="text-center text-sm text-gray-500">
+                    <p class="text-center text-sm text-brand-muted pt-3 border-t border-brand-dark/10">
                         Sudah punya akun?
-                        <Link :href="route('login')" class="text-[#174c3c] font-semibold hover:underline">
-                            Masuk
+                        <Link href="/login" class="text-brand-primary font-semibold hover:underline ml-1">
+                            Masuk di sini
                         </Link>
                     </p>
                 </form>

@@ -1,9 +1,9 @@
 <script setup>
 import { Link, router, Head } from '@inertiajs/vue3'
 import PublicLayout from '@/Layouts/PublicLayout.vue'
-import { Plus, Calendar, MapPin, Trash2, ArrowRight, FileText } from 'lucide-vue-next'
+import { Plus, Calendar, MapPin, Trash2, Users } from 'lucide-vue-next'
 
-const props = defineProps({
+defineProps({
     trips: {
         type: Object,
         required: true,
@@ -11,12 +11,17 @@ const props = defineProps({
 })
 
 function formatPrice(val) {
-    return 'Rp ' + Number(val).toLocaleString('id-ID')
+    return 'Rp ' + Number(val ?? 0).toLocaleString('id-ID')
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '-'
+    return new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 function deleteTrip(trip) {
-    if (confirm(`Yakin ingin menghapus rencana perjalanan "${trip.judul}"?`)) {
-        router.delete(route('trips.destroy', trip.id), {
+    if (confirm(`Yakin ingin menghapus rencana perjalanan "${trip.nama_trip}"?`)) {
+        router.delete(`/trips/${trip.id}`, {
             preserveScroll: true,
         })
     }
@@ -24,96 +29,119 @@ function deleteTrip(trip) {
 </script>
 
 <template>
-    <Head title="Trip Saya - NUSA WANDER" />
+    <Head title="Itinerary Saya | NUSA WANDER" />
 
     <PublicLayout>
-        <div class="max-w-7xl mx-auto px-6 lg:px-10 py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-8 sm:py-12">
             <!-- Header -->
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-10">
+            <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
                 <div>
-                    <h1 class="font-heading font-bold text-3xl md:text-4xl text-[#003527] tracking-tight">
-                        Rencana Perjalanan Saya
+                    <h1 class="font-heading font-bold text-2xl sm:text-3xl lg:text-4xl text-brand-dark tracking-tight">
+                        Itinerary Saya
                     </h1>
-                    <p class="text-base text-[#404945]/70 mt-1">
-                        Kelola itinerary, atur jadwal kunjungan, dan pantau estimasi biaya liburanmu.
+                    <p class="text-sm text-brand-muted mt-1.5">
+                        Daftar rencana perjalanan yang Anda simpan beserta estimasi biaya dan sisa anggaran.
                     </p>
                 </div>
                 <Link
-                    :href="route('trips.create')"
-                    class="inline-flex items-center gap-2 px-6 py-3 bg-[#174c3c] hover:bg-[#003527] text-white font-semibold text-sm rounded-2xl shadow-lg shadow-emerald-200 transition-all shrink-0"
+                    href="/trips/create"
+                    class="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-brand-primary hover:bg-brand-primaryHover text-white font-semibold text-sm rounded-lg transition-colors shrink-0 min-h-[44px]"
                 >
-                    <Plus class="w-4 h-4" />
-                    Buat Trip Baru
+                    <Plus class="w-4 h-4" aria-hidden="true" />
+                    Buat Rencana Baru
                 </Link>
             </div>
 
             <!-- Trips Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <article
                     v-for="trip in trips.data"
                     :key="trip.id"
-                    class="bg-white rounded-3xl border border-emerald-100 shadow-sm p-6 hover:shadow-lg transition-all flex flex-col justify-between"
+                    class="bg-white rounded-xl border border-brand-dark/10 p-5 hover:border-brand-primary/40 transition-colors flex flex-col justify-between"
                 >
                     <div class="space-y-4">
                         <div class="flex items-start justify-between gap-2">
-                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800">
-                                {{ trip.itinerary_items?.length || 0 }} Destinasi
-                            </span>
+                            <div class="flex flex-wrap gap-1.5">
+                                <span class="px-2.5 py-0.5 rounded-md text-xs font-semibold bg-brand-input text-brand-dark tabular-nums">
+                                    {{ trip.durasi_hari }} Hari
+                                </span>
+                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-medium bg-brand-bg text-brand-dark border border-brand-dark/10 tabular-nums">
+                                    <Users class="w-3 h-3" aria-hidden="true" /> {{ trip.jumlah_peserta }} Org
+                                </span>
+                                <span class="px-2.5 py-0.5 rounded-md text-xs font-medium bg-brand-bg text-brand-muted border border-brand-dark/10 tabular-nums">
+                                    {{ trip.itinerary_items_count ?? 0 }} Destinasi
+                                </span>
+                            </div>
                             <button
+                                type="button"
                                 @click="deleteTrip(trip)"
-                                class="p-1.5 text-gray-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
-                                title="Hapus Trip"
+                                :aria-label="`Hapus rencana ${trip.nama_trip}`"
+                                class="p-2 text-brand-muted hover:text-coral-text rounded-lg hover:bg-coral-light transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center"
+                                title="Hapus itinerary"
                             >
-                                <Trash2 class="w-4 h-4" />
+                                <Trash2 class="w-4 h-4" aria-hidden="true" />
                             </button>
                         </div>
 
                         <div>
-                            <Link :href="route('trips.show', trip.id)">
-                                <h3 class="font-heading font-bold text-xl text-[#003527] hover:text-[#174c3c] transition-colors line-clamp-1">
-                                    {{ trip.judul }}
-                                </h3>
-                            </Link>
-                            <p class="text-xs text-[#404945]/60 flex items-center gap-1 mt-1">
-                                <MapPin class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                                {{ trip.destination?.nama }} ({{ trip.destination?.kota }})
+                            <h2 class="font-heading font-bold text-lg text-brand-dark line-clamp-1">
+                                <Link :href="`/trips/${trip.id}`" class="hover:text-brand-primary">
+                                    {{ trip.nama_trip }}
+                                </Link>
+                            </h2>
+                            <p class="text-xs text-brand-muted flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5">
+                                <span class="inline-flex items-center gap-1">
+                                    <MapPin class="w-3.5 h-3.5 text-brand-primary shrink-0" aria-hidden="true" />
+                                    {{ trip.wilayah_tujuan }}
+                                </span>
+                                <span aria-hidden="true">&bull;</span>
+                                <span class="inline-flex items-center gap-1">
+                                    <Calendar class="w-3.5 h-3.5 text-brand-primary shrink-0" aria-hidden="true" />
+                                    {{ formatDate(trip.tanggal_mulai) }}
+                                </span>
                             </p>
                         </div>
 
-                        <p class="text-xs text-[#404945]/80 line-clamp-2 leading-relaxed">
-                            {{ trip.deskripsi || 'Tidak ada catatan tambahan untuk trip ini.' }}
-                        </p>
+                        <dl class="rounded-lg bg-brand-bg border border-brand-dark/10 p-3.5 space-y-1.5 text-xs">
+                            <div class="flex justify-between">
+                                <dt class="text-brand-muted">Anggaran</dt>
+                                <dd class="font-semibold text-brand-dark tabular-nums">{{ formatPrice(trip.anggaran) }}</dd>
+                            </div>
+                            <div class="flex justify-between">
+                                <dt class="text-brand-muted">Total estimasi</dt>
+                                <dd class="font-semibold text-brand-dark tabular-nums">{{ formatPrice(trip.total_estimasi) }}</dd>
+                            </div>
+                            <div class="flex justify-between pt-1.5 border-t border-brand-dark/10">
+                                <dt class="font-semibold text-brand-dark">Sisa anggaran</dt>
+                                <dd :class="['font-bold tabular-nums', Number(trip.sisa_anggaran) < 0 ? 'text-coral-text' : 'text-brand-primary']">
+                                    {{ formatPrice(trip.sisa_anggaran) }}
+                                </dd>
+                            </div>
+                        </dl>
                     </div>
 
-                    <div class="pt-6 mt-6 border-t border-emerald-100 flex items-center justify-between">
-                        <div>
-                            <span class="text-[11px] uppercase tracking-wider text-[#404945]/60 font-semibold">Total Estimasi</span>
-                            <p class="font-heading font-bold text-lg text-[#003527]">
-                                {{ formatPrice(trip.total_estimasi_harga) }}
-                            </p>
-                        </div>
+                    <div class="pt-4 mt-4 border-t border-brand-dark/10 flex justify-end">
                         <Link
-                            :href="route('trips.show', trip.id)"
-                            class="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold rounded-xl transition-colors"
+                            :href="`/trips/${trip.id}`"
+                            class="inline-flex items-center px-4 py-2 bg-brand-input hover:bg-brand-dark hover:text-white text-brand-dark text-xs font-semibold rounded-lg transition-colors min-h-[40px]"
                         >
-                            Buka Planner
-                            <ArrowRight class="w-3.5 h-3.5" />
+                            Buka Itinerary
                         </Link>
                     </div>
-                </div>
+                </article>
 
-                <div v-if="trips.data.length === 0" class="col-span-full bg-white rounded-3xl border border-emerald-100 p-16 text-center">
-                    <Calendar class="w-16 h-16 text-emerald-200 mx-auto mb-4" />
-                    <h3 class="font-heading font-bold text-xl text-[#003527] mb-2">Belum Ada Rencana Perjalanan</h3>
-                    <p class="text-sm text-[#404945]/70 max-w-md mx-auto mb-6">
-                        Mulai rancang liburan impianmu! Tambahkan destinasi favorit dan hitung estimasi biaya sekarang.
+                <div v-if="trips.data.length === 0" class="col-span-full bg-white rounded-xl border border-brand-dark/10 p-12 text-center">
+                    <Calendar class="w-10 h-10 text-brand-muted mx-auto mb-3" aria-hidden="true" />
+                    <h2 class="font-heading font-bold text-xl text-brand-dark mb-2">Belum ada itinerary tersimpan</h2>
+                    <p class="text-sm text-brand-muted max-w-md mx-auto mb-6">
+                        Buat rencana perjalanan pertama Anda untuk mendapatkan susunan kunjungan harian dan perhitungan sisa anggaran.
                     </p>
                     <Link
-                        :href="route('trips.create')"
-                        class="inline-flex items-center gap-2 px-6 py-3 bg-[#174c3c] hover:bg-[#003527] text-white font-semibold text-sm rounded-2xl shadow-sm transition-all"
+                        href="/trips/create"
+                        class="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-primary hover:bg-brand-primaryHover text-white font-semibold text-sm rounded-lg transition-colors min-h-[44px]"
                     >
-                        <Plus class="w-4 h-4" />
-                        Rencanakan Trip Pertama
+                        <Plus class="w-4 h-4" aria-hidden="true" />
+                        Rencanakan Perjalanan Pertama
                     </Link>
                 </div>
             </div>
