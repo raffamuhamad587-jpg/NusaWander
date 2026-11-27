@@ -2,22 +2,26 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ItineraryItem extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'trip_id',
         'destination_id',
-        'urutan',
-        'judul',
+        'hari_ke',
+        'urutan_kunjungan',
         'catatan',
-        'estimasi_harga',
     ];
 
     protected $casts = [
-        'estimasi_harga' => 'decimal:2',
+        'hari_ke' => 'integer',
+        'urutan_kunjungan' => 'integer',
     ];
 
     public function trip(): BelongsTo
@@ -28,5 +32,10 @@ class ItineraryItem extends Model
     public function destination(): BelongsTo
     {
         return $this->belongsTo(Destination::class);
+    }
+
+    public function costs(): HasMany
+    {
+        return $this->hasMany(TripCost::class);
     }
 }

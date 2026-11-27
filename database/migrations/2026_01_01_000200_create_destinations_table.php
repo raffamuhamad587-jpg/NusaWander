@@ -18,7 +18,7 @@ return new class extends Migration
             $table->decimal('latitude', 10, 8)->nullable();
             $table->decimal('longitude', 11, 8)->nullable();
             $table->string('jam_operasional', 100)->nullable();
-            $table->decimal('estimasi_harga', 12, 2)->default(0.00);
+            $table->decimal('estimasi_harga', 12, 2)->nullable();
             $table->enum('jenis_harga', ['per_orang', 'per_kelompok'])->default('per_orang');
             $table->enum('status', ['aktif', 'nonaktif'])->default('aktif');
             $table->timestamps();

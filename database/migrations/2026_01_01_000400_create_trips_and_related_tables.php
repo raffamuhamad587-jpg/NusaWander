@@ -10,32 +10,38 @@ return new class extends Migration
     {
         Schema::create('trips', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->foreignId('destination_id')->constrained('destinations')->onDelete('cascade');
-            $table->string('judul', 150);
-            $table->text('deskripsi')->nullable();
-            $table->decimal('total_estimasi_harga', 12, 2)->default(0.00);
-            $table->enum('status', ['draft', 'published', 'archived'])->default('draft');
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->string('nama_trip', 150);
+            $table->string('wilayah_tujuan', 100);
+            $table->date('tanggal_mulai');
+            $table->unsignedTinyInteger('durasi_hari');
+            $table->unsignedSmallInteger('jumlah_peserta')->default(1);
+            $table->decimal('anggaran', 12, 2);
+            $table->json('preferensi')->nullable();
+            $table->decimal('total_estimasi', 12, 2)->default(0.00);
             $table->timestamps();
         });
 
         Schema::create('itinerary_items', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('trip_id')->constrained('trips')->onDelete('cascade');
-            $table->foreignId('destination_id')->constrained('destinations')->onDelete('restrict');
-            $table->integer('urutan')->default(1);
-            $table->string('judul', 150);
+            $table->foreignId('trip_id')->constrained('trips')->cascadeOnDelete();
+            $table->foreignId('destination_id')->constrained('destinations')->restrictOnDelete();
+            $table->unsignedTinyInteger('hari_ke');
+            $table->unsignedSmallInteger('urutan_kunjungan')->default(1);
             $table->text('catatan')->nullable();
-            $table->decimal('estimasi_harga', 12, 2)->default(0.00);
             $table->timestamps();
         });
 
         Schema::create('trip_costs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('trip_id')->constrained('trips')->onDelete('cascade');
-            $table->decimal('harga_per_orang', 12, 2)->default(0.00);
-            $table->decimal('harga_per_kelompok', 12, 2)->default(0.00);
-            $table->string('keterangan', 255)->nullable();
+            $table->foreignId('trip_id')->constrained('trips')->cascadeOnDelete();
+            $table->foreignId('itinerary_item_id')->nullable()->constrained('itinerary_items')->cascadeOnDelete();
+            $table->string('nama_biaya', 150);
+            $table->enum('jenis_biaya', ['tiket', 'transportasi', 'penginapan', 'kuliner', 'lainnya'])->default('lainnya');
+            $table->enum('dasar_perhitungan', ['per_orang', 'per_kelompok', 'per_hari', 'tetap'])->default('tetap');
+            $table->unsignedInteger('jumlah')->default(1);
+            $table->decimal('harga_satuan', 12, 2)->nullable();
+            $table->decimal('subtotal', 12, 2)->nullable();
             $table->timestamps();
         });
     }

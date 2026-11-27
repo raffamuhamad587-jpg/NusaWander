@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>{{ $trip->judul }} - NUSA WANDER Itinerary</title>
+    <title>{{ $trip->nama_trip }} - NUSA WANDER Itinerary</title>
     <style>
         body {
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -33,7 +33,7 @@
             font-weight: bold;
             color: #003527;
             margin-top: 15px;
-            margin-bottom: 5px;
+            margin-bottom: 6px;
         }
         .trip-meta {
             font-size: 11px;
@@ -46,18 +46,26 @@
             color: #003527;
             border-bottom: 1px solid #e0e0e0;
             padding-bottom: 5px;
-            margin-top: 25px;
+            margin-top: 22px;
             margin-bottom: 10px;
+        }
+        .day-header {
+            background-color: #eefdf5;
+            color: #003527;
+            font-weight: bold;
+            padding: 6px 10px;
+            margin-top: 12px;
+            border-left: 3px solid #174c3c;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
-            margin-bottom: 15px;
+            margin-top: 8px;
+            margin-bottom: 14px;
         }
         th, td {
             border: 1px solid #e0e0e0;
-            padding: 8px 10px;
+            padding: 7px 9px;
             text-align: left;
         }
         th {
@@ -65,21 +73,29 @@
             color: #003527;
             font-weight: bold;
         }
-        .total-box {
+        .summary-box {
             background-color: #eefdf5;
             border: 1px solid #174c3c;
             padding: 12px 15px;
-            border-radius: 6px;
-            margin-top: 20px;
-            text-align: right;
+            margin-top: 18px;
         }
-        .total-amount {
-            font-size: 16px;
+        .summary-row {
+            margin-bottom: 4px;
+        }
+        .over-budget {
+            color: #b91c1c;
             font-weight: bold;
-            color: #003527;
+        }
+        .safe-budget {
+            color: #047857;
+            font-weight: bold;
+        }
+        .muted {
+            color: #777777;
+            font-style: italic;
         }
         .footer {
-            margin-top: 40px;
+            margin-top: 36px;
             text-align: center;
             font-size: 10px;
             color: #888888;
@@ -103,77 +119,100 @@
         </table>
     </div>
 
-    <div class="trip-title">{{ $trip->judul }}</div>
+    <div class="trip-title">{{ $trip->nama_trip }}</div>
     <div class="trip-meta">
-        <strong>Penyusun:</strong> {{ $trip->user->name }} ({{ $trip->user->email }}) &bull;
-        <strong>Destinasi Utama:</strong> {{ $trip->destination->nama }} ({{ $trip->destination->kota }})
+        <strong>Penyusun:</strong> {{ $trip->user->name }} &bull;
+        <strong>Tujuan:</strong> {{ $trip->wilayah_tujuan }} &bull;
+        <strong>Tanggal Mulai:</strong> {{ \Illuminate\Support\Carbon::parse($trip->tanggal_mulai)->format('d M Y') }} &bull;
+        <strong>Durasi:</strong> {{ $trip->durasi_hari }} Hari &bull;
+        <strong>Peserta:</strong> {{ $trip->jumlah_peserta }} Orang
     </div>
-    @if($trip->deskripsi)
-        <p style="color: #555; margin-bottom: 20px;">{{ $trip->deskripsi }}</p>
-    @endif
 
-    <div class="section-title">Jadwal Rencana Perjalanan (Itinerary)</div>
+    <div class="section-title">Susunan Itinerary Per Hari</div>
+    @for($day = 1; $day <= $trip->durasi_hari; $day++)
+        @php
+            $dayItems = $trip->itineraryItems->where('hari_ke', $day)->sortBy('urutan_kunjungan');
+        @endphp
+        <div class="day-header">Hari {{ $day }}</div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 10%; text-align: center;">Urutan</th>
+                    <th style="width: 38%;">Destinasi</th>
+                    <th style="width: 24%;">Kota &amp; Kategori</th>
+                    <th style="width: 28%;">Catatan</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($dayItems as $item)
+                    <tr>
+                        <td style="text-align: center;">{{ $item->urutan_kunjungan }}</td>
+                        <td><strong>{{ $item->destination->nama ?? '-' }}</strong></td>
+                        <td>{{ $item->destination->kota ?? '-' }} ({{ $item->destination->category->nama_kategori ?? '-' }})</td>
+                        <td>{{ $item->catatan ?: '-' }}</td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="4" class="muted" style="text-align: center;">Belum ada destinasi dijadwalkan pada Hari {{ $day }}.</td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    @endfor
+
+    <div class="section-title">Rincian Estimasi Biaya</div>
     <table>
         <thead>
             <tr>
-                <th style="width: 8%; text-align: center;">No</th>
-                <th style="width: 40%;">Destinasi</th>
-                <th style="width: 25%;">Kota / Lokasi</th>
-                <th style="width: 27%; text-align: right;">Estimasi Tiket</th>
+                <th style="width: 32%;">Komponen Biaya</th>
+                <th style="width: 14%;">Jenis</th>
+                <th style="width: 16%;">Dasar</th>
+                <th style="width: 10%; text-align: center;">Jumlah</th>
+                <th style="width: 28%; text-align: right;">Subtotal</th>
             </tr>
         </thead>
         <tbody>
-            @forelse($trip->itineraryItems as $index => $item)
+            @forelse($trip->costs as $cost)
                 <tr>
-                    <td style="text-align: center;">{{ $item->urutan }}</td>
-                    <td>
-                        <strong>{{ $item->judul }}</strong>
-                        @if($item->catatan)
-                            <br><small style="color: #666;">{{ $item->catatan }}</small>
-                        @endif
-                    </td>
-                    <td>{{ $item->destination->kota ?? '-' }}</td>
+                    <td>{{ $cost->nama_biaya }}</td>
+                    <td style="text-transform: capitalize;">{{ $cost->jenis_biaya }}</td>
+                    <td>{{ str_replace('_', ' ', $cost->dasar_perhitungan) }}</td>
+                    <td style="text-align: center;">{{ $cost->jumlah }}</td>
                     <td style="text-align: right;">
-                        Rp {{ number_format($item->estimasi_harga, 2, ',', '.') }}
+                        @if($cost->subtotal === null)
+                            <span class="muted">Belum dihitung</span>
+                        @else
+                            Rp {{ number_format($cost->subtotal, 0, ',', '.') }}
+                        @endif
                     </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="4" style="text-align: center; color: #888;">Belum ada jadwal destinasi.</td>
+                    <td colspan="5" class="muted" style="text-align: center;">Belum ada komponen biaya tercatat.</td>
                 </tr>
             @endforelse
         </tbody>
     </table>
 
-    @if($trip->costs->count() > 0)
-        <div class="section-title">Rincian Anggaran Tambahan</div>
-        <table>
-            <thead>
-                <tr>
-                    <th style="width: 50%;">Keterangan</th>
-                    <th style="width: 25%; text-align: right;">Per Orang</th>
-                    <th style="width: 25%; text-align: right;">Per Kelompok</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($trip->costs as $cost)
-                    <tr>
-                        <td>{{ $cost->keterangan }}</td>
-                        <td style="text-align: right;">Rp {{ number_format($cost->harga_per_orang, 2, ',', '.') }}</td>
-                        <td style="text-align: right;">Rp {{ number_format($cost->harga_per_kelompok, 2, ',', '.') }}</td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-    @endif
-
-    <div class="total-box">
-        <span style="font-size: 12px; color: #555;">Estimasi Total Anggaran:</span>
-        <div class="total-amount">Rp {{ number_format($trip->total_estimasi_harga, 2, ',', '.') }}</div>
+    <div class="summary-box">
+        <div class="summary-row"><strong>Anggaran Trip:</strong> Rp {{ number_format($budgetSummary['anggaran'], 0, ',', '.') }}</div>
+        <div class="summary-row"><strong>Total Estimasi Tersedia:</strong> Rp {{ number_format($budgetSummary['total_estimasi'], 0, ',', '.') }}</div>
+        <div class="summary-row">
+            <strong>Sisa Anggaran:</strong>
+            <span class="{{ $budgetSummary['is_over_budget'] ? 'over-budget' : 'safe-budget' }}">
+                Rp {{ number_format($budgetSummary['sisa_anggaran'], 0, ',', '.') }}
+                ({{ $budgetSummary['is_over_budget'] ? 'Melebihi Anggaran' : 'Dalam Batas Anggaran' }})
+            </span>
+        </div>
+        @if($budgetSummary['belum_dihitung_count'] > 0)
+            <div class="muted" style="margin-top: 6px;">
+                *Terdapat {{ $budgetSummary['belum_dihitung_count'] }} komponen biaya bertanda "Belum dihitung" yang belum masuk ke total estimasi.
+            </div>
+        @endif
     </div>
 
     <div class="footer">
-        Dihasilkan secara otomatis oleh Nusa Wander &bull; Simpan file ini sebagai panduan perjalanan Anda.
+        Dihasilkan oleh NUSA WANDER &bull; Harga pada sistem adalah estimasi yang dikelola Admin, bukan harga real-time.
     </div>
 </body>
 </html>

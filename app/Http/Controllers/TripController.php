@@ -2,10 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreTripCostRequest;
+use App\Http\Requests\StoreTripItemRequest;
+use App\Http\Requests\StoreTripRequest;
+use App\Http\Requests\UpdateTripRequest;
+use App\Models\Category;
 use App\Models\Destination;
 use App\Models\ItineraryItem;
 use App\Models\Trip;
 use App\Models\TripCost;
+use App\Services\BudgetCalculatorService;
+use App\Services\ItineraryGeneratorService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,12 +23,17 @@ use Inertia\Response;
 
 class TripController extends Controller
 {
+    public function __construct(
+        protected ItineraryGeneratorService $generator,
+        protected BudgetCalculatorService $budgetCalculator
+    ) {}
+
     /**
-     * Display a listing of user's trips.
+     * Display a listing of the authenticated tourist's own trips (FR-08).
      */
     public function index(): Response
     {
-        $trips = Trip::with(['destination', 'itineraryItems'])
+        $trips = Trip::withCount(['itineraryItems', 'costs'])
             ->where('user_id', Auth::id())
             ->latest()
             ->paginate(9);
@@ -32,258 +44,277 @@ class TripController extends Controller
     }
 
     /**
-     * Show the form for creating a new trip.
+     * Show the Smart Travel & Budget Planner creation form (FR-05).
      */
     public function create(Request $request): Response
     {
-        $destinations = Destination::where('status', 'aktif')
-            ->orderBy('nama')
-            ->get(['id', 'nama', 'kota', 'estimasi_harga', 'jenis_harga']);
+        $categories = Category::orderBy('nama_kategori')->get(['id', 'nama_kategori']);
+        $kotas = Destination::where('status', 'aktif')
+            ->select('kota')
+            ->distinct()
+            ->orderBy('kota')
+            ->pluck('kota');
+
+        $selectedDestination = null;
+        if ($request->filled('destination_id') && is_numeric($request->destination_id)) {
+            $selectedDestination = Destination::where('status', 'aktif')
+                ->find((int) $request->destination_id, ['id', 'nama', 'kota', 'category_id']);
+        }
 
         return Inertia::render('Trips/Create', [
-            'destinations' => $destinations,
-            'selectedDestinationId' => $request->destination_id ? (int) $request->destination_id : null,
+            'categories' => $categories,
+            'kotas' => $kotas,
+            'selectedDestination' => $selectedDestination,
         ]);
     }
 
     /**
-     * Store a newly created trip.
+     * Store a newly planned trip and generate rule-based day-by-day itinerary (FR-05, FR-06, FR-07).
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StoreTripRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'judul' => 'required|string|max:150',
-            'deskripsi' => 'nullable|string',
-            'destination_id' => 'required|exists:destinations,id',
-            'destination_ids' => 'nullable|array',
-            'destination_ids.*' => 'exists:destinations,id',
-        ], [
-            'judul.required' => 'Judul rencana perjalanan wajib diisi.',
-            'destination_id.required' => 'Destinasi utama wajib dipilih.',
-        ]);
-
-        $mainDest = Destination::findOrFail($validated['destination_id']);
+        $validated = $request->validated();
 
         $trip = Trip::create([
             'user_id' => Auth::id(),
-            'destination_id' => $mainDest->id,
-            'judul' => $validated['judul'],
-            'deskripsi' => $validated['deskripsi'] ?? null,
-            'total_estimasi_harga' => $mainDest->estimasi_harga,
-            'status' => 'draft',
+            'nama_trip' => $validated['nama_trip'],
+            'wilayah_tujuan' => $validated['wilayah_tujuan'],
+            'tanggal_mulai' => $validated['tanggal_mulai'],
+            'durasi_hari' => (int) $validated['durasi_hari'],
+            'jumlah_peserta' => (int) $validated['jumlah_peserta'],
+            'anggaran' => $validated['anggaran'],
+            'preferensi' => [
+                'kategori_ids' => array_values(array_map('intval', $validated['kategori_ids'] ?? [])),
+                'prioritas_biaya' => $validated['prioritas_biaya'],
+            ],
+            'total_estimasi' => 0.00,
         ]);
 
-        // Add main destination as first itinerary item
-        ItineraryItem::create([
-            'trip_id' => $trip->id,
-            'destination_id' => $mainDest->id,
-            'urutan' => 1,
-            'judul' => $mainDest->nama,
-            'catatan' => 'Destinasi Utama',
-            'estimasi_harga' => $mainDest->estimasi_harga,
-        ]);
+        // Generate rule-based itinerary from catalog
+        $result = $this->generator->generate($trip);
 
-        // Add optional extra destinations
-        if (!empty($validated['destination_ids'])) {
-            $order = 2;
-            foreach ($validated['destination_ids'] as $destId) {
-                if ($destId != $mainDest->id) {
-                    $extra = Destination::find($destId);
-                    if ($extra) {
-                        ItineraryItem::create([
-                            'trip_id' => $trip->id,
-                            'destination_id' => $extra->id,
-                            'urutan' => $order++,
-                            'judul' => $extra->nama,
-                            'catatan' => null,
-                            'estimasi_harga' => $extra->estimasi_harga,
-                        ]);
-                    }
+        // Ensure explicitly preselected destination (from detail page) is included on Day 1 if not already generated
+        if (! empty($validated['destination_id'])) {
+            $alreadyIncluded = $trip->itineraryItems()
+                ->where('destination_id', (int) $validated['destination_id'])
+                ->exists();
+
+            if (! $alreadyIncluded) {
+                $dest = Destination::with('category')->where('status', 'aktif')->find((int) $validated['destination_id']);
+                if ($dest) {
+                    $maxOrder = (int) ($trip->itineraryItems()->where('hari_ke', 1)->max('urutan_kunjungan') ?? 0);
+                    $item = ItineraryItem::create([
+                        'trip_id' => $trip->id,
+                        'destination_id' => $dest->id,
+                        'hari_ke' => 1,
+                        'urutan_kunjungan' => $maxOrder + 1,
+                        'catatan' => 'Destinasi pilihan utama',
+                    ]);
+                    $this->budgetCalculator->syncItemCost($trip, $item, $dest);
+                    $this->budgetCalculator->recalculateTrip($trip);
+                    $result['items_created']++;
+                    $result['needs_ai_alternative'] = $result['items_created'] < $trip->durasi_hari;
                 }
             }
         }
 
-        $this->recalculateTripTotal($trip);
+        $message = $result['items_created'] > 0
+            ? "Rencana perjalanan berhasil disusun dengan {$result['items_created']} destinasi dari katalog."
+            : 'Rencana perjalanan dibuat, namun belum ditemukan destinasi katalog di wilayah tersebut. Anda dapat menambah manual atau gunakan "Cari alternatif dengan AI".';
 
         return redirect()->route('trips.show', $trip->id)
-            ->with('success', 'Rencana perjalanan berhasil dibuat.');
+            ->with('success', $message);
     }
 
     /**
-     * Display the trip planner workspace.
+     * Display the day-by-day itinerary & budget planner workspace (FR-06, FR-07, FR-08).
      */
     public function show(Trip $trip): Response
     {
-        $this->authorizeUser($trip);
+        $this->authorizeOwner($trip);
 
-        $trip->load(['destination', 'itineraryItems.destination.images', 'costs']);
+        $trip->load([
+            'itineraryItems.destination.category',
+            'itineraryItems.destination.images',
+            'itineraryItems.costs',
+            'costs.itineraryItem.destination',
+        ]);
 
-        $availableDestinations = Destination::where('status', 'aktif')
+        $availableDestinations = Destination::with('category:id,nama_kategori')
+            ->where('status', 'aktif')
+            ->orderBy('kota')
             ->orderBy('nama')
-            ->get(['id', 'nama', 'kota', 'estimasi_harga', 'jenis_harga']);
+            ->get(['id', 'category_id', 'nama', 'kota', 'estimasi_harga', 'jenis_harga']);
+
+        $budgetSummary = $this->budgetCalculator->summarize($trip);
+        $needsAiAlternative = $trip->itineraryItems->count() < $trip->durasi_hari;
 
         return Inertia::render('Trips/Show', [
             'trip' => $trip,
+            'budgetSummary' => $budgetSummary,
+            'needsAiAlternative' => $needsAiAlternative,
             'availableDestinations' => $availableDestinations,
         ]);
     }
 
     /**
-     * Add an item to the itinerary.
+     * Update trip metadata (budget, duration, participants, start date, area) and recalculate costs.
      */
-    public function addItem(Request $request, Trip $trip): RedirectResponse
+    public function update(UpdateTripRequest $request, Trip $trip): RedirectResponse
     {
-        $this->authorizeUser($trip);
+        $this->authorizeOwner($trip);
 
-        $validated = $request->validate([
-            'destination_id' => 'required|exists:destinations,id',
-            'catatan' => 'nullable|string|max:500',
+        $validated = $request->validated();
+        $newDurasi = (int) $validated['durasi_hari'];
+
+        $trip->update([
+            'nama_trip' => $validated['nama_trip'],
+            'wilayah_tujuan' => $validated['wilayah_tujuan'],
+            'tanggal_mulai' => $validated['tanggal_mulai'],
+            'durasi_hari' => $newDurasi,
+            'jumlah_peserta' => (int) $validated['jumlah_peserta'],
+            'anggaran' => $validated['anggaran'],
         ]);
 
-        $destination = Destination::findOrFail($validated['destination_id']);
-        $maxOrder = $trip->itineraryItems()->max('urutan') ?? 0;
+        // Maintain Business Rule 5.3: hari_ke must always remain valid against durasi_hari
+        $trip->itineraryItems()
+            ->where('hari_ke', '>', $newDurasi)
+            ->update(['hari_ke' => $newDurasi]);
 
-        ItineraryItem::create([
-            'trip_id' => $trip->id,
-            'destination_id' => $destination->id,
-            'urutan' => $maxOrder + 1,
-            'judul' => $destination->nama,
-            'catatan' => $validated['catatan'] ?? null,
-            'estimasi_harga' => $destination->estimasi_harga,
-        ]);
+        $this->budgetCalculator->syncCostsWithTripParameters($trip);
 
-        $this->recalculateTripTotal($trip);
-
-        return back()->with('success', 'Destinasi ditambahkan ke itinerary.');
+        return back()->with('success', 'Detail perjalanan dan kalkulasi anggaran berhasil diperbarui.');
     }
 
     /**
-     * Reorder itinerary items (Drag and drop).
+     * Add a destination item to a specific day in the itinerary.
+     */
+    public function addItem(StoreTripItemRequest $request, Trip $trip): RedirectResponse
+    {
+        $this->authorizeOwner($trip);
+
+        $validated = $request->validated();
+        $destination = Destination::with('category')->where('status', 'aktif')->findOrFail($validated['destination_id']);
+        $hariKe = (int) $validated['hari_ke'];
+
+        $maxOrder = (int) ($trip->itineraryItems()
+            ->where('hari_ke', $hariKe)
+            ->max('urutan_kunjungan') ?? 0);
+
+        $item = ItineraryItem::create([
+            'trip_id' => $trip->id,
+            'destination_id' => $destination->id,
+            'hari_ke' => $hariKe,
+            'urutan_kunjungan' => $maxOrder + 1,
+            'catatan' => $validated['catatan'] ?? null,
+        ]);
+
+        $this->budgetCalculator->syncItemCost($trip, $item, $destination);
+        $this->budgetCalculator->recalculateTrip($trip);
+
+        return back()->with('success', "Destinasi ditambahkan ke Hari {$hariKe}.");
+    }
+
+    /**
+     * Reorder itinerary items within or across valid trip days.
      */
     public function reorderItems(Request $request, Trip $trip): RedirectResponse
     {
-        $this->authorizeUser($trip);
+        $this->authorizeOwner($trip);
+
+        $maxDay = max(1, (int) $trip->durasi_hari);
 
         $validated = $request->validate([
-            'items' => 'required|array',
-            'items.*.id' => 'required|exists:itinerary_items,id',
-            'items.*.urutan' => 'required|integer',
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.id' => ['required', 'integer', 'exists:itinerary_items,id'],
+            'items.*.hari_ke' => ['required', 'integer', 'min:1', "max:{$maxDay}"],
+            'items.*.urutan_kunjungan' => ['required', 'integer', 'min:1'],
         ]);
 
         foreach ($validated['items'] as $itemData) {
             ItineraryItem::where('id', $itemData['id'])
                 ->where('trip_id', $trip->id)
-                ->update(['urutan' => $itemData['urutan']]);
+                ->update([
+                    'hari_ke' => (int) $itemData['hari_ke'],
+                    'urutan_kunjungan' => (int) $itemData['urutan_kunjungan'],
+                ]);
         }
 
-        return back()->with('success', 'Urutan jadwal berhasil disimpan.');
+        return back()->with('success', 'Urutan jadwal kunjungan berhasil disimpan.');
     }
 
     /**
-     * Remove an item from the itinerary.
+     * Remove an item from the itinerary (cascade deletes its linked ticket cost).
      */
     public function removeItem(Trip $trip, ItineraryItem $item): RedirectResponse
     {
-        $this->authorizeUser($trip);
+        $this->authorizeOwner($trip);
 
         if ($item->trip_id !== $trip->id) {
-            abort(403);
+            abort(403, 'Akses tidak diizinkan.');
         }
 
         $item->delete();
-        $this->recalculateTripTotal($trip);
+        $this->budgetCalculator->recalculateTrip($trip);
 
-        return back()->with('success', 'Item berhasil dihapus dari itinerary.');
+        return back()->with('success', 'Destinasi dihapus dari itinerary.');
     }
 
     /**
-     * Save custom trip costs (budget breakdown).
+     * Save a trip cost component (supports "belum dihitung" / null subtotal).
      */
-    public function saveCost(Request $request, Trip $trip): RedirectResponse
+    public function saveCost(StoreTripCostRequest $request, Trip $trip): RedirectResponse
     {
-        $this->authorizeUser($trip);
+        $this->authorizeOwner($trip);
 
-        $validated = $request->validate([
-            'harga_per_orang' => 'required|numeric|min:0',
-            'harga_per_kelompok' => 'required|numeric|min:0',
-            'keterangan' => 'nullable|string|max:255',
-        ]);
+        $validated = $request->validated();
+
+        $itineraryItemId = $validated['itinerary_item_id'] ?? null;
+        if ($itineraryItemId !== null) {
+            $belongsToTrip = $trip->itineraryItems()->where('id', $itineraryItemId)->exists();
+            if (! $belongsToTrip) {
+                abort(403, 'Item itinerary tidak termasuk dalam trip ini.');
+            }
+        }
+
+        $dasar = $validated['dasar_perhitungan'];
+        $jumlah = $this->budgetCalculator->resolveDefaultQuantity($dasar, $trip, $validated['jumlah'] ?? null);
+
+        $isUnknown = ! empty($validated['belum_dihitung']) || ! array_key_exists('harga_satuan', $validated) || $validated['harga_satuan'] === null || $validated['harga_satuan'] === '';
+        $hargaSatuan = $isUnknown ? null : (float) $validated['harga_satuan'];
+        $subtotal = $this->budgetCalculator->calculateSubtotal($hargaSatuan, $jumlah);
 
         TripCost::create([
             'trip_id' => $trip->id,
-            'harga_per_orang' => $validated['harga_per_orang'],
-            'harga_per_kelompok' => $validated['harga_per_kelompok'],
-            'keterangan' => $validated['keterangan'] ?? 'Estimasi Tambahan',
+            'itinerary_item_id' => $itineraryItemId,
+            'nama_biaya' => $validated['nama_biaya'],
+            'jenis_biaya' => $validated['jenis_biaya'],
+            'dasar_perhitungan' => $dasar,
+            'jumlah' => $jumlah,
+            'harga_satuan' => $hargaSatuan,
+            'subtotal' => $subtotal,
         ]);
 
-        $this->recalculateTripTotal($trip);
+        $this->budgetCalculator->recalculateTrip($trip);
 
-        return back()->with('success', 'Rincian biaya berhasil ditambahkan.');
+        return back()->with('success', 'Komponen biaya berhasil ditambahkan.');
     }
 
     /**
-     * Delete a cost item.
+     * Delete a cost component and recalculate trip total.
      */
     public function deleteCost(Trip $trip, TripCost $cost): RedirectResponse
     {
-        $this->authorizeUser($trip);
+        $this->authorizeOwner($trip);
 
         if ($cost->trip_id !== $trip->id) {
-            abort(403);
+            abort(403, 'Akses tidak diizinkan.');
         }
 
         $cost->delete();
-        $this->recalculateTripTotal($trip);
+        $this->budgetCalculator->recalculateTrip($trip);
 
-        return back()->with('success', 'Biaya berhasil dihapus.');
-    }
-
-    /**
-     * Toggle trip publication status (draft <-> published).
-     */
-    public function togglePublish(Trip $trip): RedirectResponse
-    {
-        $this->authorizeUser($trip);
-
-        $newStatus = $trip->status === 'published' ? 'draft' : 'published';
-        $trip->update(['status' => $newStatus]);
-
-        $message = $newStatus === 'published'
-            ? 'Rencana perjalanan berhasil dipublikasikan ke Galeri Inspirasi!'
-            : 'Rencana perjalanan disimpan sebagai draf pribadi.';
-
-        return back()->with('success', $message);
-    }
-
-    /**
-     * Display public gallery of published trips.
-     */
-    public function publicIndex(): Response
-    {
-        $trips = Trip::with(['user', 'destination', 'itineraryItems'])
-            ->where('status', 'published')
-            ->latest()
-            ->paginate(12);
-
-        return Inertia::render('Trips/Inspirasi', [
-            'trips' => $trips,
-        ]);
-    }
-
-    /**
-     * Display public view of a published trip.
-     */
-    public function publicShow(Trip $trip): Response
-    {
-        if ($trip->status !== 'published' && $trip->user_id !== Auth::id()) {
-            abort(404, 'Itinerary belum dipublikasikan.');
-        }
-
-        $trip->load(['user', 'destination', 'itineraryItems.destination.images', 'costs']);
-
-        return Inertia::render('Trips/PublicDetail', [
-            'trip' => $trip,
-        ]);
+        return back()->with('success', 'Komponen biaya berhasil dihapus.');
     }
 
     /**
@@ -291,7 +322,7 @@ class TripController extends Controller
      */
     public function destroy(Trip $trip): RedirectResponse
     {
-        $this->authorizeUser($trip);
+        $this->authorizeOwner($trip);
 
         $trip->delete();
 
@@ -300,37 +331,29 @@ class TripController extends Controller
     }
 
     /**
-     * Export itinerary to PDF.
+     * Export itinerary & budget breakdown to PDF.
      */
     public function exportPdf(Trip $trip): HttpResponse
     {
-        $this->authorizeUser($trip);
+        $this->authorizeOwner($trip);
 
-        $trip->load(['destination', 'itineraryItems.destination', 'costs', 'user']);
+        $trip->load(['itineraryItems.destination.category', 'costs', 'user']);
+        $budgetSummary = $this->budgetCalculator->summarize($trip);
 
         $pdf = Pdf::loadView('pdf.trip', [
             'trip' => $trip,
+            'budgetSummary' => $budgetSummary,
         ])->setPaper('a4', 'portrait');
 
         return $pdf->download('NusaWander-Trip-' . $trip->id . '.pdf');
     }
 
     /**
-     * Helper to recalculate total estimasi harga.
+     * Enforce Business Rule 5.3: tourists can only view or modify their own itineraries.
      */
-    protected function recalculateTripTotal(Trip $trip): void
+    protected function authorizeOwner(Trip $trip): void
     {
-        $itemsTotal = (float) $trip->itineraryItems()->sum('estimasi_harga');
-        $costsTotal = (float) $trip->costs()->sum('harga_per_orang') + (float) $trip->costs()->sum('harga_per_kelompok');
-
-        $trip->update([
-            'total_estimasi_harga' => $itemsTotal + $costsTotal,
-        ]);
-    }
-
-    protected function authorizeUser(Trip $trip): void
-    {
-        if ($trip->user_id !== Auth::id() && !Auth::user()->isAdmin()) {
+        if ($trip->user_id !== Auth::id()) {
             abort(403, 'Akses tidak diizinkan.');
         }
     }

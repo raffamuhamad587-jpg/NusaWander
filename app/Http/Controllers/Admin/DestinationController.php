@@ -17,22 +17,29 @@ use Inertia\Response;
 class DestinationController extends Controller
 {
     /**
-     * Display a listing of the destinations.
+     * Display a listing of destinations with search, category, status, price, and photo filters.
      */
     public function index(Request $request): Response
     {
         $query = Destination::with(['category', 'images'])
-            ->when($request->search, function ($q, $search) {
+            ->when($request->filled('search'), function ($q) use ($request) {
+                $search = trim((string) $request->search);
                 $q->where(function ($sub) use ($search) {
                     $sub->where('nama', 'like', "%{$search}%")
                         ->orWhere('kota', 'like', "%{$search}%");
                 });
             })
-            ->when($request->category_id, function ($q, $catId) {
-                $q->where('category_id', $catId);
+            ->when($request->filled('category_id'), function ($q) use ($request) {
+                $q->where('category_id', (int) $request->category_id);
             })
-            ->when($request->status, function ($q, $status) {
-                $q->where('status', $status);
+            ->when($request->filled('status'), function ($q) use ($request) {
+                $q->where('status', $request->status);
+            })
+            ->when($request->query('price_status') === 'missing', function ($q) {
+                $q->whereNull('estimasi_harga');
+            })
+            ->when($request->query('photo_status') === 'missing', function ($q) {
+                $q->doesntHave('images');
             })
             ->latest();
 
@@ -42,10 +49,18 @@ class DestinationController extends Controller
         return Inertia::render('Admin/Destinations/Index', [
             'destinations' => $destinations,
             'categories' => $categories,
+            'stats' => [
+                'total' => Destination::count(),
+                'aktif' => Destination::where('status', 'aktif')->count(),
+                'menunggu' => Destination::where('status', 'nonaktif')->count(),
+                'tanpaHarga' => Destination::whereNull('estimasi_harga')->count(),
+            ],
             'filters' => [
                 'search' => $request->search ?? '',
                 'category_id' => $request->category_id ?? '',
                 'status' => $request->status ?? '',
+                'price_status' => $request->price_status ?? '',
+                'photo_status' => $request->photo_status ?? '',
             ],
         ]);
     }
@@ -67,9 +82,11 @@ class DestinationController extends Controller
      */
     public function store(StoreDestinationRequest $request): RedirectResponse
     {
-        $destination = Destination::create($request->validated());
+        $data = $request->validated();
+        unset($data['photos']);
 
-        // Handle uploaded images if any
+        $destination = Destination::create($data);
+
         if ($request->hasFile('photos')) {
             $order = 1;
             foreach ($request->file('photos') as $photo) {
@@ -101,7 +118,7 @@ class DestinationController extends Controller
     }
 
     /**
-     * Update the specified destination.
+     * Update the specified destination (including estimasi_harga & jenis_harga).
      */
     public function update(UpdateDestinationRequest $request, Destination $destination): RedirectResponse
     {
@@ -127,7 +144,11 @@ class DestinationController extends Controller
      */
     public function destroy(Destination $destination): RedirectResponse
     {
-        // Delete all images physically
+        if ($destination->itineraryItems()->exists()) {
+            return redirect()->route('admin.destinations.index')
+                ->with('error', 'Destinasi tidak dapat dihapus karena sedang digunakan pada itinerary wisatawan.');
+        }
+
         foreach ($destination->images as $image) {
             $relativePath = str_replace('/storage/', '', $image->url_gambar);
             Storage::disk('public')->delete($relativePath);

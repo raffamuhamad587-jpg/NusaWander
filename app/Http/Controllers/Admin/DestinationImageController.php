@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\StoreDestinationImageRequest;
 use App\Models\Destination;
 use App\Models\DestinationImage;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class DestinationImageController extends Controller
@@ -36,16 +37,32 @@ class DestinationImageController extends Controller
     }
 
     /**
-     * Update order of an image.
+     * Update caption / metadata of an image (FR-11).
      */
-    public function updateOrder(Request $request, DestinationImage $destinationImage): RedirectResponse
+    public function update(Request $request, DestinationImage $destinationImage): RedirectResponse
     {
-        $request->validate([
-            'urutan_tampil' => 'required|integer|min:1',
+        $validated = $request->validate([
+            'keterangan' => ['nullable', 'string', 'max:255'],
         ]);
 
         $destinationImage->update([
-            'urutan_tampil' => $request->urutan_tampil,
+            'keterangan' => $validated['keterangan'] ?? null,
+        ]);
+
+        return back()->with('success', 'Keterangan foto berhasil diperbarui.');
+    }
+
+    /**
+     * Update display order of an image.
+     */
+    public function updateOrder(Request $request, DestinationImage $destinationImage): RedirectResponse
+    {
+        $validated = $request->validate([
+            'urutan_tampil' => ['required', 'integer', 'min:1'],
+        ]);
+
+        $destinationImage->update([
+            'urutan_tampil' => (int) $validated['urutan_tampil'],
         ]);
 
         return back()->with('success', 'Urutan foto berhasil diperbarui.');

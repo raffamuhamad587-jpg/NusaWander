@@ -2,25 +2,38 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TripCost extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'trip_id',
-        'harga_per_orang',
-        'harga_per_kelompok',
-        'keterangan',
+        'itinerary_item_id',
+        'nama_biaya',
+        'jenis_biaya',
+        'dasar_perhitungan',
+        'jumlah',
+        'harga_satuan',
+        'subtotal',
     ];
 
     protected $casts = [
-        'harga_per_orang' => 'decimal:2',
-        'harga_per_kelompok' => 'decimal:2',
+        'jumlah' => 'integer',
+        'harga_satuan' => 'decimal:2',
+        'subtotal' => 'decimal:2',
     ];
 
     public function trip(): BelongsTo
     {
         return $this->belongsTo(Trip::class);
+    }
+
+    public function itineraryItem(): BelongsTo
+    {
+        return $this->belongsTo(ItineraryItem::class);
     }
 }

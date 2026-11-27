@@ -22,7 +22,7 @@ class StoreDestinationRequest extends FormRequest
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',
             'jam_operasional' => 'nullable|string|max:100',
-            'estimasi_harga' => 'required|numeric|min:0',
+            'estimasi_harga' => 'nullable|numeric|min:0',
             'jenis_harga' => 'required|in:per_orang,per_kelompok',
             'status' => 'required|in:aktif,nonaktif',
             'photos.*' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',

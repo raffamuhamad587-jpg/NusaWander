@@ -1,74 +1,76 @@
 <?php
 
+use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\DestinationController as AdminDestinationController;
+use App\Http\Controllers\Admin\DestinationImageController as AdminDestinationImageController;
+use App\Http\Controllers\AiDiscoveryController;
 use App\Http\Controllers\ProfileController;
-use Illuminate\Foundation\Application;
+use App\Http\Controllers\Public\DestinasiController;
+use App\Http\Controllers\TripController;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
-Route::get('/', [\App\Http\Controllers\Public\DestinasiController::class, 'home'])->name('home');
-Route::get('/destinasi', [\App\Http\Controllers\Public\DestinasiController::class, 'index'])->name('destinasi.index');
-Route::get('/destinasi/{destination}', [\App\Http\Controllers\Public\DestinasiController::class, 'show'])->name('destinasi.show');
-Route::get('/inspirasi', [\App\Http\Controllers\TripController::class, 'publicIndex'])->name('trips.inspirasi');
-Route::get('/inspirasi/{trip}', [\App\Http\Controllers\TripController::class, 'publicShow'])->name('trips.public-show');
+// Public routes (Wisatawan & Guest)
+Route::get('/', [DestinasiController::class, 'home'])->name('home');
+Route::get('/destinasi', [DestinasiController::class, 'index'])->name('destinasi.index');
+Route::get('/destinasi/{destination}', [DestinasiController::class, 'show'])->name('destinasi.show');
 
+// Redirect legacy /dashboard cleanly based on role
 Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+    if (request()->user()?->isAdmin()) {
+        return redirect()->route('admin.dashboard');
+    }
 
+    return redirect()->route('trips.index');
+})->middleware(['auth'])->name('dashboard');
+
+// Authenticated Wisatawan routes
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Reviews
-    Route::post('/destinasi/{destination}/reviews', [\App\Http\Controllers\ReviewController::class, 'store'])->name('reviews.store');
-    Route::delete('/reviews/{review}', [\App\Http\Controllers\ReviewController::class, 'destroy'])->name('reviews.destroy');
+    // Smart Travel & Budget Planner (FR-05 s.d. FR-08)
+    Route::get('/trips', [TripController::class, 'index'])->name('trips.index');
+    Route::get('/trips/create', [TripController::class, 'create'])->name('trips.create');
+    Route::post('/trips', [TripController::class, 'store'])->name('trips.store');
+    Route::get('/trips/{trip}', [TripController::class, 'show'])->name('trips.show');
+    Route::put('/trips/{trip}', [TripController::class, 'update'])->name('trips.update');
+    Route::delete('/trips/{trip}', [TripController::class, 'destroy'])->name('trips.destroy');
 
-    // Trips & Itinerary Planner
-    Route::get('/trips', [\App\Http\Controllers\TripController::class, 'index'])->name('trips.index');
-    Route::get('/trips/create', [\App\Http\Controllers\TripController::class, 'create'])->name('trips.create');
-    Route::post('/trips', [\App\Http\Controllers\TripController::class, 'store'])->name('trips.store');
-    Route::get('/trips/{trip}', [\App\Http\Controllers\TripController::class, 'show'])->name('trips.show');
-    Route::patch('/trips/{trip}/toggle-publish', [\App\Http\Controllers\TripController::class, 'togglePublish'])->name('trips.toggle-publish');
-    Route::delete('/trips/{trip}', [\App\Http\Controllers\TripController::class, 'destroy'])->name('trips.destroy');
+    Route::post('/trips/{trip}/items', [TripController::class, 'addItem'])->name('trips.items.add');
+    Route::patch('/trips/{trip}/items/reorder', [TripController::class, 'reorderItems'])->name('trips.items.reorder');
+    Route::delete('/trips/{trip}/items/{item}', [TripController::class, 'removeItem'])->name('trips.items.remove');
 
-    Route::post('/trips/{trip}/items', [\App\Http\Controllers\TripController::class, 'addItem'])->name('trips.items.add');
-    Route::patch('/trips/{trip}/items/reorder', [\App\Http\Controllers\TripController::class, 'reorderItems'])->name('trips.items.reorder');
-    Route::delete('/trips/{trip}/items/{item}', [\App\Http\Controllers\TripController::class, 'removeItem'])->name('trips.items.remove');
+    Route::post('/trips/{trip}/costs', [TripController::class, 'saveCost'])->name('trips.costs.store');
+    Route::delete('/trips/{trip}/costs/{cost}', [TripController::class, 'deleteCost'])->name('trips.costs.destroy');
 
-    Route::post('/trips/{trip}/costs', [\App\Http\Controllers\TripController::class, 'saveCost'])->name('trips.costs.store');
-    Route::delete('/trips/{trip}/costs/{cost}', [\App\Http\Controllers\TripController::class, 'deleteCost'])->name('trips.costs.destroy');
+    Route::get('/trips/{trip}/export-pdf', [TripController::class, 'exportPdf'])->name('trips.export-pdf');
 
-    Route::get('/trips/{trip}/export-pdf', [\App\Http\Controllers\TripController::class, 'exportPdf'])->name('trips.export-pdf');
+    // AI-Assisted Discovery (FR-13 & FR-14) - throttled external lookup
+    Route::post('/ai/alternatives', [AiDiscoveryController::class, 'suggest'])
+        ->middleware('throttle:10,1')
+        ->name('ai.alternatives');
 });
 
+// Admin Portal routes (FR-09 s.d. FR-12)
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/dashboard', \App\Http\Controllers\Admin\DashboardController::class)->name('dashboard');
+    Route::get('/dashboard', AdminDashboardController::class)->name('dashboard');
 
-    Route::resource('/categories', \App\Http\Controllers\Admin\CategoryController::class)
-        ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
+    Route::resource('/categories', AdminCategoryController::class)
+        ->only(['index', 'store', 'update', 'destroy']);
 
-    Route::patch('/destinations/{destination}/toggle-status', [\App\Http\Controllers\Admin\DestinationController::class, 'toggleStatus'])
+    Route::patch('/destinations/{destination}/toggle-status', [AdminDestinationController::class, 'toggleStatus'])
         ->name('destinations.toggle-status');
 
-    Route::resource('/destinations', \App\Http\Controllers\Admin\DestinationController::class)
+    Route::resource('/destinations', AdminDestinationController::class)
         ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
 
-    Route::patch('/hotels/{hotel}/toggle-status', [\App\Http\Controllers\Admin\HotelController::class, 'toggleStatus'])
-        ->name('hotels.toggle-status');
-    Route::resource('/hotels', \App\Http\Controllers\Admin\HotelController::class)
-        ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
-
-    Route::patch('/foods/{food}/toggle-status', [\App\Http\Controllers\Admin\FoodController::class, 'toggleStatus'])
-        ->name('foods.toggle-status');
-    Route::resource('/foods', \App\Http\Controllers\Admin\FoodController::class)
-        ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
-
-    Route::patch('/destination-images/{destination_image}/order', [\App\Http\Controllers\Admin\DestinationImageController::class, 'updateOrder'])
+    Route::patch('/destination-images/{destination_image}/order', [AdminDestinationImageController::class, 'updateOrder'])
         ->name('destination-images.order');
 
-    Route::resource('/destination-images', \App\Http\Controllers\Admin\DestinationImageController::class)
-        ->only(['store', 'destroy']);
+    Route::resource('/destination-images', AdminDestinationImageController::class)
+        ->only(['store', 'update', 'destroy']);
 });
 
 require __DIR__.'/auth.php';

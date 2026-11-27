@@ -14,8 +14,7 @@ class CategorySeeder extends Seeder
             ['nama_kategori' => 'Budaya', 'deskripsi' => 'Destinasi yang menampilkan kearifan lokal, seni tradisional, dan budaya masyarakat.'],
             ['nama_kategori' => 'Sejarah', 'deskripsi' => 'Situs bersejarah, candi, museum, dan bangunan peninggalan masa lalu.'],
             ['nama_kategori' => 'Kuliner', 'deskripsi' => 'Tempat kuliner khas daerah, pasar malam, dan sentra makanan tradisional.'],
-            ['nama_kategori' => 'Hotel', 'deskripsi' => 'Akomodasi perhotelan mulai dari budget hingga bintang 5, villa, resort, dan homestay.'],
-            ['nama_kategori' => 'Makanan', 'deskripsi' => 'Restoran, warung makan, kafe, dan tempat kuliner lainnya selain kuliner khas daerah.'],
+            ['nama_kategori' => 'Rekreasi', 'deskripsi' => 'Taman rekreasi, spot panorama modern, dan wisata keluarga.'],
         ];
 
         foreach ($categories as $cat) {
